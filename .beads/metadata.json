@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "spliney",
+  "project_id": "936d08a8-c491-46e8-9c52-200dabee0abc"
+}
