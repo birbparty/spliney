@@ -6,3 +6,9 @@ htmldocs/
 .dolt/
 *.db
 .beads-credential-key
+
+# Ralph review artifacts (not tracked)
+.agents/reviews/
+
+# Compiled test binaries (nimble test --outdir:build)
+build/
