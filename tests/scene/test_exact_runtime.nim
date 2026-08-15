@@ -1,7 +1,10 @@
-import std/unittest
+import std/[sequtils, unittest]
 
+import spliney/backends/noop/recording
 import spliney/generated/wire_registry
 import spliney/io/loader
+import spliney/math/geometry
+import spliney/render/protocol
 import spliney/scene/exact_runtime
 
 proc property(key: uint32; value: WireValue): WireProperty =
@@ -63,3 +66,56 @@ suite "exact mesh and constraint runtime":
     let scene = newExactScene(wire, [2'u32, 3, 4])
     check not scene.isOk
     check scene.error.message == "mesh index is out of range"
+
+  test "solid fill and indexed mesh emission is stable and stack balanced":
+    let fill = ExactComponent(objectId: 3, typeKey: 20, fillRuleValue: 2)
+    let solid = ExactComponent(objectId: 4, typeKey: 18,
+      colorValue: 0xff282828'u32, parent: fill)
+    fill.children.add(solid)
+    let imageComponent = ExactComponent(
+      objectId: 1,
+      typeKey: 100,
+      assetId: 0,
+      blendMode: 3,
+      renderOpacity: 0.5,
+      worldTransform: translationMat2D(5, 10),
+      originX: 0.5,
+      originY: 0.5)
+    let mesh = ExactComponent(
+      objectId: 2,
+      typeKey: 109,
+      parent: imageComponent,
+      vertices: @[
+        ExactComponent(renderTranslation: vec2(0, 0), u: 0, v: 0),
+        ExactComponent(renderTranslation: vec2(2, 0), u: 1, v: 0),
+        ExactComponent(renderTranslation: vec2(0, 3), u: 0, v: 1)],
+      triangleIndices: @[0'u16, 1, 2])
+    imageComponent.mesh = mesh
+    let scene = ExactScene(
+      components: @[ExactComponent(objectId: 0, typeKey: 1),
+        imageComponent, mesh, fill, solid],
+      meshes: @[mesh],
+      solidFill: fill,
+      fillPaintSource: solid)
+    let factory = newNoOpFactory()
+    let image = NoOpRenderImage(assetIndex: 0)
+    image.configureImage(10, 20)
+    let first = newNoOpRenderer()
+    let bounds = aabb(0, 0, 100, 100)
+    require scene.emitDrawCommands(factory, first, [RenderImage(image)],
+      bounds, IdentityMat2D).isOk
+    check first.stackDepth == 0
+    check first.invariantErrors.len == 0
+    check first.commands.filterIt(it.kind == RecordedCommandKind.drawPath).len == 1
+    let meshes = first.commands.filterIt(
+      it.kind == RecordedCommandKind.drawImageMesh)
+    require meshes.len == 1
+    check meshes[0].vertices == @[0'f32, 0, 2, 0, 0, 3]
+    check meshes[0].uvCoords == @[0'f32, 0, 1, 0, 0, 1]
+    check meshes[0].indices == @[0'u16, 1, 2]
+    check meshes[0].opacity == 0.5
+
+    let second = newNoOpRenderer()
+    require scene.emitDrawCommands(factory, second, [RenderImage(image)],
+      bounds, IdentityMat2D).isOk
+    check second.canonicalBytes == first.canonicalBytes

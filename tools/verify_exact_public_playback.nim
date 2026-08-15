@@ -3,10 +3,11 @@
 import std/os
 
 import spliney
+import spliney/backends/noop/recording
 
 type
-  CountingImage = ref object of PreparedImage
-  CountingFactory = ref object of ResourceFactory
+  CountingImage = ref object of NoOpRenderImage
+  CountingFactory = ref object of NoOpFactory
     prepared, released: int
 
 proc uint32Be(bytes: openArray[byte]; offset: int): uint32 =
@@ -24,7 +25,9 @@ method prepareEmbeddedPng(factory: CountingFactory; assetIndex: uint32;
   doAssert compressedBytes.uint32Be(20) == expectedHeight
   doAssert assetIndex == factory.prepared.uint32
   inc factory.prepared
-  ok[PreparedImage](CountingImage())
+  let image = CountingImage(assetIndex: assetIndex)
+  image.configureImage(expectedWidth.int, expectedHeight.int)
+  ok[PreparedImage](image)
 
 method releasePreparedImage(factory: CountingFactory;
     image: PreparedImage): SplineyStatus =
@@ -75,6 +78,23 @@ doAssert replaceable.advanceAndApply(0.1).isOk
 doAssert replaceable.replaceAnimation(1).isOk
 doAssert replaceable.advanceAndApply(0.1).isOk
 doAssert factory.prepared == 13
+
+let renderer = newNoOpRenderer()
+let drawn = replaceable.draw(resources.value, renderer,
+  Rect(minX: 0, minY: 0, maxX: 960, maxY: 540))
+doAssert drawn.isOk, drawn.error.message
+doAssert renderer.stackDepth == 0
+doAssert renderer.invariantErrors.len == 0
+var pathCount, meshCount, imageCount: int
+for command in renderer.commands:
+  case command.kind
+  of RecordedCommandKind.drawPath: inc pathCount
+  of RecordedCommandKind.drawImageMesh: inc meshCount
+  of RecordedCommandKind.drawImage: inc imageCount
+  else: discard
+doAssert pathCount == 1
+doAssert meshCount == 3
+doAssert imageCount > 0
 
 let prematureClose = imported.value.close()
 doAssert not prematureClose.isOk

@@ -29,6 +29,8 @@ type
     fillRule*: FillRule
     paintStyle*: RenderPaintStyle
     color*: ColorInt
+    pathVerbs*: seq[PathVerb]
+    pathPoints*: seq[float32]
     vertices*: seq[float32]
     uvCoords*: seq[float32]
     indices*: seq[uint16]
@@ -262,7 +264,12 @@ method drawPath*(renderer: NoOpRenderer; path: RenderPath;
     opacity: renderer.state.opacity,
     fillRule: path.fillRule)
   if path of NoOpRenderPath:
-    command.resourceId = NoOpRenderPath(path).resourceId
+    let concrete = NoOpRenderPath(path)
+    command.pathVerbs = concrete.raw.verbs
+    command.pathPoints = newSeq[float32](concrete.raw.points.len * 2)
+    for index, point in concrete.raw.points:
+      command.pathPoints[index * 2] = point.x
+      command.pathPoints[index * 2 + 1] = point.y
   if paint of NoOpRenderPaint:
     let concrete = NoOpRenderPaint(paint)
     command.paintStyle = concrete.paintStyle
@@ -271,13 +278,19 @@ method drawPath*(renderer: NoOpRenderer; path: RenderPath;
   renderer.commands.add(move(command))
 
 method clipPath*(renderer: NoOpRenderer; path: RenderPath) =
-  renderer.commands.add(RecordedCommand(
+  var command = RecordedCommand(
     kind: RecordedCommandKind.clipPath,
     transform: renderer.state.transform,
     opacity: renderer.state.opacity,
-    resourceId: if path of NoOpRenderPath:
-      NoOpRenderPath(path).resourceId else: 0,
-    fillRule: path.fillRule))
+    fillRule: path.fillRule)
+  if path of NoOpRenderPath:
+    let concrete = NoOpRenderPath(path)
+    command.pathVerbs = concrete.raw.verbs
+    command.pathPoints = newSeq[float32](concrete.raw.points.len * 2)
+    for index, point in concrete.raw.points:
+      command.pathPoints[index * 2] = point.x
+      command.pathPoints[index * 2 + 1] = point.y
+  renderer.commands.add(move(command))
 
 method drawImage*(renderer: NoOpRenderer; image: RenderImage;
     sampler: ImageSampler; blendMode: BlendMode; opacity: float32) =
@@ -356,6 +369,10 @@ proc canonicalBytes*(renderer: NoOpRenderer): seq[byte] =
     result.add(ord(command.fillRule).byte)
     result.add(ord(command.paintStyle).byte)
     result.appendU32(command.color)
+    result.appendU32(command.pathVerbs.len.uint32)
+    for value in command.pathVerbs: result.add(ord(value).byte)
+    result.appendU32(command.pathPoints.len.uint32)
+    for value in command.pathPoints: result.appendF32(value)
     result.appendU32(command.vertices.len.uint32)
     for value in command.vertices: result.appendF32(value)
     result.appendU32(command.uvCoords.len.uint32)

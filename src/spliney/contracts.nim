@@ -7,8 +7,10 @@
 import spliney/animation/engine/linear
 import spliney/errors
 import spliney/io/loader
+import spliney/math/geometry
 import spliney/render/protocol
 import spliney/scene/artboard
+import spliney/scene/exact_runtime
 
 export errors
 export protocol
@@ -58,20 +60,14 @@ type
     owner: ImportedRiveFile
     factory: ResourceFactory
     images: seq[PreparedImage]
+    renderFactory: Factory
+    renderImages: seq[RenderImage]
 
   PlayableScene* = ref object
     ## Independent mutable artboard, dependency, and animation state.
     closed: bool
     owner: ImportedRiveFile
     runtime: ArtboardInstance
-
-proc contractPending[T](stage: ErrorStage; label = ""): SplineyResult[T] =
-  err[T](SplineyError(
-    category: ErrorCategory.unsupportedContent,
-    stage: stage,
-    message: "runtime implementation for the frozen public contract is pending",
-    context: ErrorContext(label: label, objectTypeKey: -1,
-      propertyKey: -1, assetId: -1, animationIndex: -1)))
 
 proc lifecycleError[T](message: string; stage: ErrorStage;
     label = ""): SplineyResult[T] =
@@ -183,7 +179,18 @@ proc prepareResources*(file: ImportedRiveFile; factory: ResourceFactory):
           propertyKey: 212, assetId: asset.index.int64, animationIndex: -1)))
     images.add(prepared.value)
   inc file.resourceCount
-  ok(PreparedResources(owner: file, factory: factory, images: move(images)))
+  var renderImages: seq[RenderImage]
+  if factory of Factory:
+    renderImages = newSeq[RenderImage](images.len)
+    for index, image in images:
+      if image of RenderImage:
+        renderImages[index] = RenderImage(image)
+  ok(PreparedResources(
+    owner: file,
+    factory: factory,
+    images: move(images),
+    renderFactory: if factory of Factory: Factory(factory) else: nil,
+    renderImages: move(renderImages)))
 
 proc newScene*(file: ImportedRiveFile; artboardIndex, animationIndex: int):
     SplineyResult[PlayableScene] =
@@ -234,12 +241,49 @@ proc draw*(scene: PlayableScene; resources: PreparedResources;
     SplineyStatus =
   ## Emits backend-neutral commands using contain-fit followed by translation
   ## expressed in destination/screen pixels.
-  discard scene
-  discard resources
-  discard renderer
-  discard destination
-  discard screenTranslation
-  errStatus(contractPending[bool](ErrorStage.drawSubmission).error)
+  if scene.isNil or scene.closed or scene.runtime.isNil or
+      not scene.runtime.settled:
+    return errStatus(lifecycleError[bool](
+      "playable scene is closed or not initially settled",
+      ErrorStage.drawSubmission).error)
+  if resources.isNil or resources.closed:
+    return errStatus(lifecycleError[bool]("prepared resources are closed",
+      ErrorStage.drawSubmission).error)
+  if scene.owner != resources.owner:
+    return errStatus(lifecycleError[bool](
+      "scene and resources belong to different imported files",
+      ErrorStage.drawSubmission).error)
+  if resources.renderFactory.isNil or not (renderer of Renderer):
+    return errStatus(SplineyError(
+      category: ErrorCategory.backend,
+      stage: ErrorStage.drawSubmission,
+      message: "factory or renderer does not implement the render protocol",
+      context: ErrorContext(objectTypeKey: -1, propertyKey: -1,
+        assetId: -1, animationIndex: scene.runtime.animationIndex.int32)))
+  for index, image in resources.renderImages:
+    if image.isNil:
+      return errStatus(SplineyError(
+        category: ErrorCategory.backend,
+        stage: ErrorStage.drawSubmission,
+        message: "prepared image does not implement RenderImage",
+        context: ErrorContext(objectTypeKey: 105, propertyKey: 212,
+          assetId: index.int64,
+          animationIndex: scene.runtime.animationIndex.int32)))
+  let artboardBounds = aabb(0'f32, 0'f32,
+    scene.runtime.definition.width, scene.runtime.definition.height)
+  let destinationBounds = aabb(destination.minX, destination.minY,
+    destination.maxX, destination.maxY)
+  if artboardBounds.isEmptyOrNan or destinationBounds.isEmptyOrNan:
+    return errStatus(SplineyError(
+      category: ErrorCategory.render,
+      stage: ErrorStage.drawSubmission,
+      message: "artboard or destination bounds are empty",
+      context: ErrorContext(objectTypeKey: -1, propertyKey: -1,
+        assetId: -1, animationIndex: scene.runtime.animationIndex.int32)))
+  let presentation = translationMat2D(screenTranslation.x,
+    screenTranslation.y) * containFit(artboardBounds, destinationBounds)
+  scene.runtime.exact.emitDrawCommands(resources.renderFactory,
+    Renderer(renderer), resources.renderImages, artboardBounds, presentation)
 
 proc close*(scene: PlayableScene): SplineyStatus =
   ## Idempotently releases mutable scene state. Safe on nil.
@@ -264,6 +308,8 @@ proc close*(resources: PreparedResources): SplineyStatus =
       firstFailure = released.error
       failed = true
   resources.images.setLen(0)
+  resources.renderImages.setLen(0)
+  resources.renderFactory = nil
   resources.factory = nil
   if not resources.owner.isNil and resources.owner.resourceCount > 0:
     dec resources.owner.resourceCount

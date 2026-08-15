@@ -4,8 +4,12 @@ import std/[json, os, strformat]
 
 import spliney/animation/engine/linear
 import spliney/animation/keyed/runtime
+import spliney/backends/noop/recording
 import spliney/io/loader
+import spliney/math/geometry
+import spliney/render/protocol
 import spliney/scene/artboard
+import spliney/scene/exact_runtime
 
 if paramCount() notin 1 .. 2:
   quit "usage: verify_exact_keyed_runtime <exact.riv> [official-oracle.json]"
@@ -75,6 +79,12 @@ if paramCount() == 2:
   let oracle = parseFile(paramStr(2))
   let absoluteTolerance = oracle["tolerance"]["absolute"].getFloat
   let relativeTolerance = oracle["tolerance"]["relative"].getFloat
+  let drawFactory = newNoOpFactory()
+  var drawImages: seq[RenderImage]
+  for asset in artboards.value[0].imageAssets:
+    let image = NoOpRenderImage(assetIndex: asset.index)
+    image.configureImage(asset.width.int, asset.height.int)
+    drawImages.add(image)
 
   proc verifyState(instance: ArtboardInstance; state: JsonNode) =
     proc verifyNumber(actual: float32; expected: JsonNode; label: string) =
@@ -87,6 +97,67 @@ if paramCount() == 2:
         label: string) =
       for index in 0 .. 5:
         verifyNumber(actual[index], expected[index], &"{label}[{index}]")
+
+    proc verifyDrawCommands() =
+      let renderer = newNoOpRenderer()
+      let bounds = aabb(0'f32, 0'f32, 500'f32, 500'f32)
+      let presentation = containFit(bounds,
+        aabb(0'f32, 0'f32, 960'f32, 540'f32))
+      let drawn = instance.exact.emitDrawCommands(drawFactory, renderer,
+        drawImages, bounds, presentation)
+      doAssert drawn.isOk, drawn.error.message
+      doAssert renderer.stackDepth == 0
+      doAssert renderer.invariantErrors.len == 0
+      var commands: seq[RecordedCommand]
+      for command in renderer.commands:
+        if command.kind in {RecordedCommandKind.drawPath,
+            RecordedCommandKind.drawImage,
+            RecordedCommandKind.drawImageMesh}:
+          commands.add(command)
+      doAssert commands.len == state["drawCommands"].len
+      for index in 0 ..< state["drawCommands"].len:
+        let expected = state["drawCommands"][index]
+        let actual = commands[index]
+        let expectedKind = expected["kind"].getStr
+        case expectedKind
+        of "path":
+          doAssert actual.kind == RecordedCommandKind.drawPath
+          doAssert actual.color == 0xff282828'u32
+          doAssert actual.fillRule == FillRule.clockwise
+        of "image":
+          doAssert actual.kind == RecordedCommandKind.drawImage
+          doAssert actual.resourceId == expected["imageIndex"].getInt.uint32
+        of "imageMesh":
+          doAssert actual.kind == RecordedCommandKind.drawImageMesh
+          doAssert actual.resourceId == expected["imageIndex"].getInt.uint32
+          doAssert actual.vertices.len == expected["vertices"].len * 2
+          doAssert actual.uvCoords.len == expected["uvs"].len * 2
+          doAssert actual.indices.len == expected["indices"].len
+          for vertexIndex in 0 ..< expected["vertices"].len:
+            let expectedVertex = expected["vertices"][vertexIndex]
+            verifyNumber(actual.vertices[vertexIndex * 2], expectedVertex[0],
+              &"draw {index} vertex {vertexIndex} x")
+            verifyNumber(actual.vertices[vertexIndex * 2 + 1], expectedVertex[1],
+              &"draw {index} vertex {vertexIndex} y")
+          for uvIndex in 0 ..< expected["uvs"].len:
+            let expectedUv = expected["uvs"][uvIndex]
+            verifyNumber(actual.uvCoords[uvIndex * 2], expectedUv[0],
+              &"draw {index} uv {uvIndex} x")
+            verifyNumber(actual.uvCoords[uvIndex * 2 + 1], expectedUv[1],
+              &"draw {index} uv {uvIndex} y")
+          for indexIndex in 0 ..< expected["indices"].len:
+            let expectedIndex = expected["indices"][indexIndex]
+            doAssert actual.indices[indexIndex] == expectedIndex.getInt.uint16
+        else:
+          doAssert false, "unknown draw command kind"
+        verifyMatrix(actual.transform.values, expected["transform"],
+          &"draw {index} transform")
+        verifyNumber(actual.opacity, expected["opacity"],
+          &"draw {index} opacity")
+        if expectedKind != "path":
+          doAssert actual.samplerKey == expected["sampler"].getInt.uint8
+          doAssert actual.blendModeValue ==
+            expected["blendMode"].getInt.uint8
 
     for expected in state["animatedProperties"]:
       let objectId = expected["objectId"].getInt.uint32
@@ -148,6 +219,7 @@ if paramCount() == 2:
           expected["translation"][1], &"deformed y object={objectId}")
       else:
         doAssert false, "unknown solver object kind"
+    verifyDrawCommands()
 
   for animationIndex in 0 ..< oracle["animations"].len:
     let animationOracle = oracle["animations"][animationIndex]
@@ -162,4 +234,4 @@ if paramCount() == 2:
       remaining -= delta
       if remaining < 0.0000001'f32: remaining = 0
     cloned.value.verifyState(animationOracle["states"][1])
-  echo "official animated-property oracle verified at start and bounded target states"
+  echo "official numeric and draw-command oracle verified at start and bounded target states"

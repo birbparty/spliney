@@ -2,7 +2,7 @@
 ## Transform/constraint/skinning formulas are ported from the pinned MIT-licensed
 ## Rive runtime identified in docs/reference/rive-runtime-reference.md.
 
-import std/[math, parseutils, tables]
+import std/[math, parseutils, strutils, tables]
 
 import spliney/animation/keyed/runtime
 import spliney/core/transform/node
@@ -10,6 +10,7 @@ import spliney/errors
 import spliney/generated/wire_registry
 import spliney/io/loader
 import spliney/math/geometry
+import spliney/render/protocol
 
 type
   EmbeddedImageDefinition* = ref object
@@ -44,6 +45,8 @@ type
     imageAsset*: EmbeddedImageDefinition
     mesh*: ExactComponent
     blendMode*: uint32
+    colorValue*: uint32
+    fillRuleValue*: uint32
 
     skin*: ExactComponent
     vertices*: seq[ExactComponent]
@@ -63,6 +66,11 @@ type
     bone*: ExactComponent
     inverseBind*: Mat2D
 
+    renderVertexBuffer: RenderBuffer
+    renderUvBuffer: RenderBuffer
+    renderIndexBuffer: RenderBuffer
+    staticBuffersInitialized: bool
+
   ExactScene* = ref object
     components*: seq[ExactComponent]
     imageAssets*: seq[EmbeddedImageDefinition]
@@ -70,6 +78,11 @@ type
     skins*: seq[ExactComponent]
     transforms*: seq[ExactComponent]
     constraints*: seq[ExactComponent]
+    solidFill*: ExactComponent
+    fillPaintSource*: ExactComponent
+    renderFactory: Factory
+    renderFillPath: RenderPath
+    renderFillPaint: RenderPaint
 
 proc exactError(message: string; stage = ErrorStage.referenceResolution;
     objectId = MissingObjectId; propertyKey = MissingObjectId;
@@ -125,6 +138,26 @@ proc uintProperty(item: WireObject; key: uint32;
   var value: uint
   if parseUInt(lookup.defaultText, value) == 0 or value > high(uint32).uint:
     return err[uint32](exactError("uint property default is invalid",
+      ErrorStage.objectStream, propertyKey = key,
+      category = ErrorCategory.malformedData))
+  ok(value.uint32)
+
+proc colorProperty(item: WireObject; key: uint32): SplineyResult[uint32] =
+  let lookup = item.propertyOrDefault(key)
+  if not lookup.found:
+    return err[uint32](exactError("missing generated color metadata",
+      ErrorStage.objectStream, propertyKey = key,
+      category = ErrorCategory.malformedData))
+  if lookup.serialized:
+    if lookup.value.kind != WireKind.colorValue:
+      return err[uint32](exactError("color property has wrong wire value",
+        ErrorStage.objectStream, propertyKey = key,
+        category = ErrorCategory.malformedData))
+    return ok(lookup.value.colorValue)
+  var value: uint
+  let start = if lookup.defaultText.startsWith("0x"): 2 else: 0
+  if parseHex(lookup.defaultText, value, start) == 0 or value > high(uint32).uint:
+    return err[uint32](exactError("color property default is invalid",
       ErrorStage.objectStream, propertyKey = key,
       category = ErrorCategory.malformedData))
   ok(value.uint32)
@@ -253,6 +286,10 @@ proc newExactScene*(wire: WireFile; componentWireIndices: openArray[uint32];
         take(component.y, item.floatProperty(14), ExactScene)
       scene.transforms.add(component)
     case item.typeKey
+    of 18:
+      take(component.colorValue, item.colorProperty(37), ExactScene)
+    of 20:
+      take(component.fillRuleValue, item.uintProperty(40), ExactScene)
     of 40, 41:
       take(component.length, item.floatProperty(89), ExactScene)
     of 43:
@@ -370,6 +407,14 @@ proc newExactScene*(wire: WireFile; componentWireIndices: openArray[uint32];
       component.parent.constraints.add(component)
     else:
       discard
+
+  for component in scene.components:
+    if component.typeKey == 20:
+      for child in component.children:
+        if child.typeKey == 18:
+          scene.solidFill = component
+          scene.fillPaintSource = child
+          break
 
   for mesh in scene.meshes:
     for index in mesh.triangleIndices:
@@ -625,4 +670,188 @@ proc settle*(scene: ExactScene): SplineyStatus =
             mesh.skin.boneTransforms[boneIndex.int].values[matrixIndex] * factor
       vertex.renderTranslation = blended *
         (mesh.skin.bindTransform * vec2(vertex.vertexX, vertex.vertexY))
+  okStatus()
+
+proc drawError(message: string; objectId = MissingObjectId;
+    assetId: int64 = -1): SplineyError =
+  SplineyError(
+    category: ErrorCategory.render,
+    stage: ErrorStage.drawSubmission,
+    message: message,
+    context: ErrorContext(
+      label: if objectId == MissingObjectId: "" else: $objectId,
+      objectTypeKey: -1,
+      propertyKey: -1,
+      assetId: assetId,
+      animationIndex: -1))
+
+proc ensureFillResources(scene: ExactScene; factory: Factory;
+    artboardBounds: AABB): SplineyStatus =
+  if scene.solidFill.isNil: return okStatus()
+  if not scene.renderFactory.isNil and scene.renderFactory != factory:
+    return errStatus(drawError(
+      "scene draw resources belong to a different factory"))
+  if not scene.renderFillPath.isNil: return okStatus()
+  var raw: RawPath
+  raw.moveTo(vec2(artboardBounds.minX, artboardBounds.minY))
+  raw.lineTo(vec2(artboardBounds.maxX, artboardBounds.minY))
+  raw.lineTo(vec2(artboardBounds.maxX, artboardBounds.maxY))
+  raw.lineTo(vec2(artboardBounds.minX, artboardBounds.maxY))
+  raw.close()
+  if scene.solidFill.fillRuleValue > ord(high(FillRule)).uint32:
+    return errStatus(drawError("unsupported exact fill rule",
+      scene.solidFill.objectId))
+  scene.renderFillPath = factory.makeRenderPath(raw,
+    FillRule(scene.solidFill.fillRuleValue))
+  scene.renderFillPaint = factory.makeRenderPaint()
+  if scene.renderFillPath.isNil or scene.renderFillPaint.isNil:
+    scene.renderFillPath = nil
+    scene.renderFillPaint = nil
+    return errStatus(drawError("factory failed to create fill resources",
+      scene.solidFill.objectId))
+  scene.renderFillPaint.style(RenderPaintStyle.fill)
+  scene.renderFillPaint.color(scene.fillPaintSource.colorValue)
+  scene.renderFactory = factory
+  okStatus()
+
+proc ensureMeshBuffers(mesh: ExactComponent; factory: Factory): SplineyStatus =
+  template discardBuffers() =
+    mesh.renderVertexBuffer = nil
+    mesh.renderUvBuffer = nil
+    mesh.renderIndexBuffer = nil
+    mesh.staticBuffersInitialized = false
+
+  let vertexByteCount = mesh.vertices.len * 2 * sizeof(float32)
+  let indexByteCount = mesh.triangleIndices.len * sizeof(uint16)
+  if mesh.renderVertexBuffer.isNil:
+    mesh.renderVertexBuffer = factory.makeRenderBuffer(
+      RenderBufferType.vertex, {}, vertexByteCount)
+    mesh.renderUvBuffer = factory.makeRenderBuffer(
+      RenderBufferType.vertex,
+      {RenderBufferFlag.mappedOnceAtInitialization}, vertexByteCount)
+    mesh.renderIndexBuffer = factory.makeRenderBuffer(
+      RenderBufferType.index,
+      {RenderBufferFlag.mappedOnceAtInitialization}, indexByteCount)
+    if mesh.renderVertexBuffer.isNil or mesh.renderUvBuffer.isNil or
+        mesh.renderIndexBuffer.isNil:
+      discardBuffers()
+      return errStatus(drawError("factory failed to create mesh buffers",
+        mesh.objectId))
+
+  if not mesh.staticBuffersInitialized:
+    let uvDestination = cast[ptr UncheckedArray[float32]](
+      mesh.renderUvBuffer.map())
+    if vertexByteCount > 0 and uvDestination.isNil:
+      mesh.renderUvBuffer.unmap()
+      discardBuffers()
+      return errStatus(drawError("mesh UV buffer mapping failed",
+        mesh.objectId))
+    for index, vertex in mesh.vertices:
+      uvDestination[index * 2] = vertex.u
+      uvDestination[index * 2 + 1] = vertex.v
+    mesh.renderUvBuffer.unmap()
+
+    let indexDestination = cast[ptr UncheckedArray[uint16]](
+      mesh.renderIndexBuffer.map())
+    if indexByteCount > 0 and indexDestination.isNil:
+      mesh.renderIndexBuffer.unmap()
+      discardBuffers()
+      return errStatus(drawError("mesh index buffer mapping failed",
+        mesh.objectId))
+    for index, value in mesh.triangleIndices:
+      indexDestination[index] = value
+    mesh.renderIndexBuffer.unmap()
+    mesh.staticBuffersInitialized = true
+
+  let vertexDestination = cast[ptr UncheckedArray[float32]](
+    mesh.renderVertexBuffer.map())
+  if vertexByteCount > 0 and vertexDestination.isNil:
+    mesh.renderVertexBuffer.unmap()
+    discardBuffers()
+    return errStatus(drawError("mesh vertex buffer mapping failed",
+      mesh.objectId))
+  for index, vertex in mesh.vertices:
+    vertexDestination[index * 2] = vertex.renderTranslation.x
+    vertexDestination[index * 2 + 1] = vertex.renderTranslation.y
+  mesh.renderVertexBuffer.unmap()
+  okStatus()
+
+proc decodeBlendMode(value: uint32; decoded: var BlendMode): bool =
+  case value
+  of 3: decoded = BlendMode.srcOver
+  of 14: decoded = BlendMode.screen
+  of 15: decoded = BlendMode.overlay
+  of 16: decoded = BlendMode.darken
+  of 17: decoded = BlendMode.lighten
+  of 18: decoded = BlendMode.colorDodge
+  of 19: decoded = BlendMode.colorBurn
+  of 20: decoded = BlendMode.hardLight
+  of 21: decoded = BlendMode.softLight
+  of 22: decoded = BlendMode.difference
+  of 23: decoded = BlendMode.exclusion
+  of 24: decoded = BlendMode.multiply
+  of 25: decoded = BlendMode.hue
+  of 26: decoded = BlendMode.saturation
+  of 27: decoded = BlendMode.color
+  of 28: decoded = BlendMode.luminosity
+  else: return false
+  true
+
+proc emitDrawCommands*(scene: ExactScene; factory: Factory;
+    renderer: Renderer; images: openArray[RenderImage]; artboardBounds: AABB;
+    presentation: Mat2D): SplineyStatus =
+  ## Emits the exact asset's audited solid artboard fill and image drawables.
+  ## Images are traversed in reverse component order, matching Rive's stable
+  ## back-to-front draw order.
+  if scene.isNil or factory.isNil or renderer.isNil:
+    return errStatus(drawError("nil exact draw dependency"))
+  if not scene.renderFactory.isNil and scene.renderFactory != factory:
+    return errStatus(drawError(
+      "scene draw resources belong to a different factory"))
+  let fillReady = scene.ensureFillResources(factory, artboardBounds)
+  if not fillReady.isOk: return fillReady
+  if scene.renderFactory.isNil: scene.renderFactory = factory
+
+  renderer.save()
+  renderer.transform(presentation)
+  if not scene.renderFillPath.isNil:
+    renderer.drawPath(scene.renderFillPath, scene.renderFillPaint)
+
+  for componentIndex in countdown(scene.components.high, 0):
+    let imageComponent = scene.components[componentIndex]
+    if imageComponent.typeKey != 100 or imageComponent.renderOpacity <= 0:
+      continue
+    if imageComponent.assetId >= images.len.uint32 or
+        images[imageComponent.assetId.int].isNil:
+      renderer.restore()
+      return errStatus(drawError("prepared image reference is invalid",
+        imageComponent.objectId, imageComponent.assetId.int64))
+    var blendMode: BlendMode
+    if not imageComponent.blendMode.decodeBlendMode(blendMode):
+      renderer.restore()
+      return errStatus(drawError("unsupported exact image blend mode",
+        imageComponent.objectId, imageComponent.assetId.int64))
+    let image = images[imageComponent.assetId.int]
+    renderer.save()
+    if imageComponent.mesh.isNil:
+      renderer.transform(imageComponent.worldTransform * translationMat2D(
+        -image.width.float32 * imageComponent.originX,
+        -image.height.float32 * imageComponent.originY))
+      renderer.drawImage(image, LinearClampSampler, blendMode,
+        imageComponent.renderOpacity)
+    else:
+      let mesh = imageComponent.mesh
+      let buffersReady = mesh.ensureMeshBuffers(factory)
+      if not buffersReady.isOk:
+        renderer.restore()
+        renderer.restore()
+        return buffersReady
+      if mesh.skin.isNil:
+        renderer.transform(imageComponent.worldTransform)
+      renderer.drawImageMesh(image, LinearClampSampler,
+        mesh.renderVertexBuffer, mesh.renderUvBuffer, mesh.renderIndexBuffer,
+        mesh.vertices.len.uint32, mesh.triangleIndices.len.uint32,
+        blendMode, imageComponent.renderOpacity)
+    renderer.restore()
+  renderer.restore()
   okStatus()
