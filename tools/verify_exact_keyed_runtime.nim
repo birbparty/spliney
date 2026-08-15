@@ -1,13 +1,14 @@
 ## Private-asset verifier for the exact keyed-animation import slice.
 
-import std/[os, strformat]
+import std/[json, os, strformat]
 
 import spliney/animation/engine/linear
 import spliney/animation/keyed/runtime
 import spliney/io/loader
+import spliney/scene/artboard
 
-if paramCount() != 1:
-  quit "usage: verify_exact_keyed_runtime <exact.riv>"
+if paramCount() notin 1 .. 2:
+  quit "usage: verify_exact_keyed_runtime <exact.riv> [official-oracle.json]"
 
 let path = paramStr(1)
 let raw = readFile(path)
@@ -21,6 +22,9 @@ if not imported.isOk:
 let linearAnimations = importLinearAnimations(loaded.value)
 if not linearAnimations.isOk:
   quit &"linear animation import failed: {linearAnimations.error.message}"
+let artboards = importArtboards(loaded.value)
+if not artboards.isOk:
+  quit &"artboard import failed: {artboards.error.message}"
 
 var objectCount = 0
 var propertyCount = 0
@@ -34,6 +38,13 @@ for animation in imported.value:
 
 doAssert imported.value.len == 3
 doAssert linearAnimations.value.len == 3
+doAssert artboards.value.len == 1
+echo &"artboard component count: {artboards.value[0].componentCount}"
+doAssert artboards.value[0].componentCount == 229
+for objectId in [9'u32, 14, 16, 23, 111, 112, 141]:
+  let wireIndex = artboards.value[0].componentWireIndices[objectId.int]
+  echo &"  object {objectId}: wire={wireIndex} " &
+    &"type={loaded.value.objects[wireIndex.int].typeKey}"
 doAssert linearAnimations.value[0].name == "Timeline 1"
 doAssert linearAnimations.value[0].fps == 24
 doAssert linearAnimations.value[0].durationFrames == 192
@@ -59,3 +70,35 @@ for animation in linearAnimations.value:
     &"duration={animation.durationFrames} speed={animation.speed} " &
     &"loop={animation.loopMode} workArea={animation.enableWorkArea} " &
     &"[{animation.workStart}, {animation.workEnd}]"
+
+if paramCount() == 2:
+  let oracle = parseFile(paramStr(2))
+  let absoluteTolerance = oracle["tolerance"]["absolute"].getFloat
+  let relativeTolerance = oracle["tolerance"]["relative"].getFloat
+
+  proc verifyState(instance: ArtboardInstance; state: JsonNode) =
+    for expected in state["animatedProperties"]:
+      let objectId = expected["objectId"].getInt.uint32
+      let propertyKey = expected["propertyKey"].getInt.uint32
+      let actual = instance.animatedFloat(objectId, propertyKey)
+      doAssert actual.isOk, actual.error.message
+      let wanted = expected["value"].getFloat
+      let tolerance = absoluteTolerance + relativeTolerance * abs(wanted)
+      doAssert abs(actual.value.float64 - wanted) <= tolerance,
+        &"animated property mismatch object={objectId} property={propertyKey} " &
+        &"actual={actual.value} expected={wanted} tolerance={tolerance}"
+
+  for animationIndex in 0 ..< oracle["animations"].len:
+    let animationOracle = oracle["animations"][animationIndex]
+    let cloned = artboards.value[0].cloneArtboard(animationIndex)
+    doAssert cloned.isOk, cloned.error.message
+    doAssert cloned.value.initialSettle().isOk
+    cloned.value.verifyState(animationOracle["states"][0])
+    var remaining = animationOracle["targetSeconds"].getFloat.float32
+    while remaining > 0:
+      let delta = min(0.1'f32, remaining)
+      doAssert cloned.value.advanceAndApply(delta).isOk
+      remaining -= delta
+      if remaining < 0.0000001'f32: remaining = 0
+    cloned.value.verifyState(animationOracle["states"][1])
+  echo "official animated-property oracle verified at start and bounded target states"

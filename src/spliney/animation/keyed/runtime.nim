@@ -40,6 +40,9 @@ type
     dirt*: ComponentDirt
     recurseDirt*: bool
 
+  FloatPropertyCell = ref object
+    value: float32
+
   CorePropertyTarget* = ref object
     objectId*: uint32
     typeKey*: uint32
@@ -101,6 +104,34 @@ proc registerFloatProperty*(target: CorePropertyTarget; propertyKey: uint32;
     setter: setter,
     dirt: dirt,
     recurseDirt: recurseDirt)
+  okStatus()
+
+proc registerStoredFloatProperty*(target: CorePropertyTarget;
+    propertyKey: uint32; initialValue: float32; dirt = DirtComponents;
+    recurseDirt = false): SplineyStatus =
+  let cell = FloatPropertyCell(value: initialValue)
+  target.registerFloatProperty(propertyKey,
+    proc(): float32 = cell.value,
+    proc(value: float32) = cell.value = value,
+    dirt,
+    recurseDirt)
+
+proc floatValue*(target: CorePropertyTarget; propertyKey: uint32):
+    SplineyResult[float32] =
+  if target.isNil or not target.floatProperties.hasKey(propertyKey):
+    return err[float32](keyedError("unsupported keyed float property",
+      if target.isNil: MissingObjectId else: target.objectId, propertyKey))
+  ok(target.floatProperties[propertyKey].getter())
+
+proc setFloatValue*(target: CorePropertyTarget; propertyKey: uint32;
+    value: float32): SplineyStatus =
+  if target.isNil or not target.floatProperties.hasKey(propertyKey):
+    return errStatus(keyedError("unsupported keyed float property",
+      if target.isNil: MissingObjectId else: target.objectId, propertyKey))
+  let binding = target.floatProperties[propertyKey]
+  binding.setter(value)
+  if not target.dependency.isNil and binding.dirt != DirtNone:
+    discard target.dependency.addDirt(binding.dirt, binding.recurseDirt)
   okStatus()
 
 proc bindNodeProperties*(target: CorePropertyTarget;

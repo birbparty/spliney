@@ -4,7 +4,10 @@
 ## Gate 0 freezes their ownership and error semantics before those bodies are
 ## filled in. Importing this module never imports a graphics package.
 
+import spliney/animation/engine/linear
 import spliney/errors
+import spliney/io/loader
+import spliney/scene/artboard
 
 export errors
 
@@ -42,6 +45,9 @@ type
     ## Immutable resolved definitions plus owned compressed embedded bytes.
     label: string
     closed: bool
+    wire: WireFile
+    artboards: seq[ArtboardDefinition]
+    sceneCount: int
 
   PreparedResources* = ref object
     ## Shared decoded/backend resources prepared while a context is valid.
@@ -50,6 +56,8 @@ type
   PlayableScene* = ref object
     ## Independent mutable artboard, dependency, and animation state.
     closed: bool
+    owner: ImportedRiveFile
+    runtime: ArtboardInstance
 
   ResourceFactory* = ref object of RootObj
     ## Backend-defined resource acquisition seam. Concrete methods are frozen
@@ -68,22 +76,81 @@ proc contractPending[T](stage: ErrorStage; label = ""): SplineyResult[T] =
     context: ErrorContext(label: label, objectTypeKey: -1,
       propertyKey: -1, assetId: -1, animationIndex: -1)))
 
+proc lifecycleError[T](message: string; stage: ErrorStage;
+    label = ""): SplineyResult[T] =
+  err[T](SplineyError(
+    category: ErrorCategory.lifecycle,
+    stage: stage,
+    message: message,
+    context: ErrorContext(label: label, objectTypeKey: -1,
+      propertyKey: -1, assetId: -1, animationIndex: -1)))
+
 proc importRive*(bytes: openArray[byte]; label = "<memory>"):
     SplineyResult[ImportedRiveFile] =
   ## Imports caller bytes into an immutable owned file definition. A successful
   ## result never borrows `bytes`; the caller may release them immediately.
-  discard bytes
-  contractPending[ImportedRiveFile](ErrorStage.objectStream, label)
+  let loaded = loadRiveWire(bytes, label)
+  if not loaded.isOk:
+    return err[ImportedRiveFile](loaded.error)
+  let artboards = importArtboards(loaded.value)
+  if not artboards.isOk:
+    return err[ImportedRiveFile](artboards.error)
+  ok(ImportedRiveFile(
+    label: label,
+    wire: loaded.value,
+    artboards: artboards.value))
 
 proc loadRiveFile*(path: string; label = ""): SplineyResult[ImportedRiveFile] =
   ## File-reading convenience with stable path/label error context.
-  contractPending[ImportedRiveFile](ErrorStage.fileRead,
-    if label.len > 0: label else: path)
+  let effectiveLabel = if label.len > 0: label else: path
+  var raw: string
+  try:
+    raw = readFile(path)
+  except CatchableError:
+    return err[ImportedRiveFile](SplineyError(
+      category: ErrorCategory.consumerIo,
+      stage: ErrorStage.fileRead,
+      message: "unable to read Rive file",
+      context: ErrorContext(label: effectiveLabel, objectTypeKey: -1,
+        propertyKey: -1, assetId: -1, animationIndex: -1)))
+  if raw.len == 0:
+    importRive([], effectiveLabel)
+  else:
+    importRive(raw.toOpenArrayByte(0, raw.high), effectiveLabel)
 
 proc defaultArtboard*(file: ImportedRiveFile): SplineyResult[ArtboardInfo] =
   ## Returns immutable metadata for the declared default artboard.
-  discard file
-  contractPending[ArtboardInfo](ErrorStage.defaultArtboardSelection)
+  if file.isNil or file.closed:
+    return lifecycleError[ArtboardInfo]("imported Rive file is closed",
+      ErrorStage.defaultArtboardSelection)
+  if file.artboards.len == 0:
+    return err[ArtboardInfo](SplineyError(
+      category: ErrorCategory.resolution,
+      stage: ErrorStage.defaultArtboardSelection,
+      message: "Rive file contains no default artboard",
+      context: ErrorContext(label: file.label, objectTypeKey: -1,
+        propertyKey: -1, assetId: -1, animationIndex: -1)))
+  let definition = file.artboards[0]
+  var animations: seq[AnimationInfo]
+  for index, animation in definition.animations:
+    animations.add(AnimationInfo(
+      index: index,
+      name: animation.name,
+      fps: animation.fps.float32,
+      durationFrames: animation.durationFrames,
+      durationSeconds: animation.durationSeconds,
+      speed: animation.speed,
+      direction: (if animation.speed < 0: -1 else: 1),
+      loopValue: animation.loopMode.uint32,
+      workAreaEnabled: animation.enableWorkArea,
+      workStartFrame: animation.startFrame,
+      workEndFrame: animation.endFrame))
+  ok(ArtboardInfo(
+    index: 0,
+    name: definition.name,
+    bounds: Rect(minX: 0, minY: 0,
+      maxX: definition.width, maxY: definition.height),
+    animations: animations))
 
 proc prepareResources*(file: ImportedRiveFile; factory: ResourceFactory):
     SplineyResult[PreparedResources] =
@@ -95,31 +162,46 @@ proc prepareResources*(file: ImportedRiveFile; factory: ResourceFactory):
 proc newScene*(file: ImportedRiveFile; artboardIndex, animationIndex: int):
     SplineyResult[PlayableScene] =
   ## Clones fresh mutable state while sharing only immutable file data.
-  discard file
-  discard artboardIndex
-  discard animationIndex
-  contractPending[PlayableScene](ErrorStage.sceneClone)
+  if file.isNil or file.closed:
+    return lifecycleError[PlayableScene]("imported Rive file is closed",
+      ErrorStage.sceneClone)
+  if artboardIndex < 0 or artboardIndex >= file.artboards.len:
+    return err[PlayableScene](SplineyError(
+      category: ErrorCategory.scene,
+      stage: ErrorStage.sceneClone,
+      message: "artboard index out of range",
+      context: ErrorContext(label: file.label, objectTypeKey: -1,
+        propertyKey: -1, assetId: -1, animationIndex: animationIndex.int32)))
+  let cloned = file.artboards[artboardIndex].cloneArtboard(animationIndex)
+  if not cloned.isOk:
+    return err[PlayableScene](cloned.error)
+  inc file.sceneCount
+  ok(PlayableScene(owner: file, runtime: cloned.value))
 
 proc initialSettle*(scene: PlayableScene): SplineyStatus =
   ## Applies the authored start pose and settles dependencies without weakening
   ## the positive-delta frame contract.
-  discard scene
-  errStatus(contractPending[bool](ErrorStage.initialSettle).error)
+  if scene.isNil or scene.closed:
+    return errStatus(lifecycleError[bool]("playable scene is closed",
+      ErrorStage.initialSettle).error)
+  scene.runtime.initialSettle()
 
 proc advanceAndApply*(scene: PlayableScene; dt: float32): SplineyStatus =
   ## Advances continuous time, applies properties, and settles dependencies.
   ## Runtime validation requires finite `0 < dt <= 0.1`.
-  discard scene
-  discard dt
-  errStatus(contractPending[bool](ErrorStage.frameAdvance).error)
+  if scene.isNil or scene.closed:
+    return errStatus(lifecycleError[bool]("playable scene is closed",
+      ErrorStage.frameAdvance).error)
+  scene.runtime.advanceAndApply(dt)
 
 proc replaceAnimation*(scene: var PlayableScene; animationIndex: int):
     SplineyStatus =
   ## Transactionally constructs and settles replacement state. Failure leaves
   ## `scene` behaviorally unchanged; success disposes the old state after swap.
-  discard scene
-  discard animationIndex
-  errStatus(contractPending[bool](ErrorStage.sceneClone).error)
+  if scene.isNil or scene.closed:
+    return errStatus(lifecycleError[bool]("playable scene is closed",
+      ErrorStage.sceneClone).error)
+  scene.runtime.replaceAnimation(animationIndex)
 
 proc draw*(scene: PlayableScene; resources: PreparedResources;
     renderer: RenderSink; destination: Rect; screenTranslation = Vec2()):
@@ -137,6 +219,10 @@ proc close*(scene: PlayableScene): SplineyStatus =
   ## Idempotently releases mutable scene state. Safe on nil.
   if scene.isNil or scene.closed: return okStatus()
   scene.closed = true
+  scene.runtime = nil
+  if not scene.owner.isNil and scene.owner.sceneCount > 0:
+    dec scene.owner.sceneCount
+  scene.owner = nil
   okStatus()
 
 proc close*(resources: PreparedResources): SplineyStatus =
@@ -150,5 +236,11 @@ proc close*(file: ImportedRiveFile): SplineyStatus =
   ## Idempotently releases immutable definitions after scenes/resources close.
   ## Safe on nil.
   if file.isNil or file.closed: return okStatus()
+  if file.sceneCount != 0:
+    return errStatus(lifecycleError[bool](
+      "cannot close imported Rive file with live scenes",
+      ErrorStage.cleanup, file.label).error)
   file.closed = true
+  file.artboards.setLen(0)
+  file.wire = nil
   okStatus()

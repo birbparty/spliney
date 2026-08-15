@@ -76,9 +76,11 @@ repeated `close` release each native resource at most once. Finalizers are only
 a safety net and may not be the normal graphics cleanup path.
 
 The compile-only fixture at `tests/contracts/public_consumer.nim` locks these
-symbols through the public package barrel. The Gate 0 bodies currently return a
-structured pending error; Gate 1 through Gate 4 replace those bodies without
-changing the accepted contract.
+symbols through the public package barrel. Import, default-artboard discovery,
+linear-animation scene construction, initial settle, bounded advance,
+transactional replacement, and their lifecycle checks are implemented by the
+Gate 2 exact-asset slice. Resource preparation and drawing retain structured
+pending errors until their later gates, without changing the accepted contract.
 
 ## Rationale
 
