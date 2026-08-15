@@ -43,7 +43,8 @@ correctness.
    excludes the broad Phase 2/3/5 milestones from asset readiness.
 10. **Treat Beads/remote sync as a gate.** The plan now requires resolution of
     the observed Dolt branch/no-common-ancestor errors, proof of pull/push, and
-    Git/Dolt remote verification at handoff.
+    Git/Dolt remote verification at handoff. The planning session completed
+    that repair; implementation begins by verifying it remains green.
 
 ### Declined
 

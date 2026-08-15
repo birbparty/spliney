@@ -13,12 +13,11 @@ Before implementation, create an asset-specific epic/milestone and update the
 graph so this plan is represented in Beads. Do not use this Markdown plan as
 live status tracking after that conversion.
 
-First resolve Beads synchronization. `bd prime`/`bd dolt pull` currently report
-that the working branch has no configured Dolt branch, and auto-push reports a
-no-common-ancestor failure. Identify the intended remote branch/history without
-discarding either side, configure or reconcile it, then prove `bd dolt pull`
-and `bd dolt push` succeed before creating the implementation graph. A local-only
-task graph is not a valid starting state.
+Beads synchronization was repaired during this planning session: the stale
+one-issue remote lineage was reconciled to the current full graph, `main` now
+tracks `origin`, and normal `bd dolt pull`/`bd dolt push` both pass. Re-run both
+commands before creating the implementation graph and stop if either regresses.
+A local-only task graph is not a valid starting state.
 
 ## Reuse existing beads where their acceptance matches
 
@@ -116,8 +115,8 @@ readiness milestone.
 
 ## Suggested Beads conversion order
 
-1. Resolve the Dolt branch/history problem and prove pull/push before task-graph
-   edits.
+1. Reconfirm normal Dolt pull/push before task-graph edits; the ancestry/tracking
+   repair completed during planning must remain green.
 2. Create the asset-specific epic/milestone and the new decision/probe beads.
 3. Add the new acceptance language to reusable existing beads without erasing
    broader valid scope.
