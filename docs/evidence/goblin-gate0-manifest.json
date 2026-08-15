@@ -22,7 +22,9 @@
     "tools/raylib_render_spike.nim": "3bd317b26c6c68c300d01486de10097877f4733d86111fd249848ae28167da66",
     "tools/run_raylib_render_spike.sh": "7b64b9567ab7b6fd8afa1392f0c56e844e26d52f915090a6326a57c9ac87d9c2",
     "tools/raylib_png_decode_probe.nim": "77eb7ddfa69ebf370129451098d96b1347576d7edd980e9f6100101cedc84051",
-    "tools/run_raylib_png_decode_probe.sh": "d26673a749bb54761decc9ee5791344305c4da7a5a69ff84f6cf27dbe94d95d9"
+    "tools/run_raylib_png_decode_probe.sh": "d26673a749bb54761decc9ee5791344305c4da7a5a69ff84f6cf27dbe94d95d9",
+    "tools/generate_rive_registry.nim": "4d6080f91bb1a57790ffc694f0f9256fb508584f448f09c0e3fabc1f240d5790",
+    "tools/run_generate_rive_registry.sh": "2836b5b1644cab72a5fc905c660f27938f64c89679ad5a4b391641888db9d4d5"
   },
   "privateEvidence": {
     "wireAuditSha256": "e761c71cc00d3d249c2076aa229fa223c58cd2a22deff3bde888a8ee4e015ad5",
@@ -79,6 +81,14 @@
       "447": 1,
       "515": 1
     }
+  },
+  "generatedRegistry": {
+    "officialDefsFileCount": 353,
+    "typeCount": 353,
+    "runtimePropertyCount": 586,
+    "defsAggregateSha256": "69189bf0f5ef0ad4d3691048e2a351698cfd23494ff9d5b41ffc0e249d73f15f",
+    "generatedSourceSha256": "2b465417a8c25761e8f684eeab67307733bcc6e584d5c5daafffa9c0afbf8257",
+    "regeneration": "two runs byte-for-byte identical and committed-output check passed"
   },
   "oracleCoveragePerState": {
     "boneAndRootBoneWorldMatrices": 6,

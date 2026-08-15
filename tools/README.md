@@ -1,5 +1,17 @@
 # Implementation and readiness tools
 
+`run_generate_rive_registry.sh` pins the official runtime and regenerates the
+complete type/property metadata and CoreRegistry factory skeleton from all 353
+`dev/defs` JSON files. It rejects key/name collisions and inheritance errors,
+runs twice for determinism, and supports a fail-closed committed-output check:
+
+```bash
+tools/run_generate_rive_registry.sh \
+  --runtime /absolute/path/rive-runtime \
+  --output src/spliney/generated/wire_registry.nim \
+  --check
+```
+
 `run_rive_wire_audit.sh` is the non-shipping Gate 0 wire probe. It validates
 the explicit private asset path and official runtime checkout against their
 pins, reads the complete property schema from that checkout, and emits a
