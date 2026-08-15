@@ -20,6 +20,7 @@ task test, "Run the spliney test suite":
   exec "nim c -r --hints:off --mm:orc --outdir:build tests/io/test_loader.nim"
   exec "nim c -r --hints:off --mm:orc --outdir:build tests/math/test_geometry.nim"
   exec "nim c -r --hints:off --mm:orc --outdir:build tests/render/test_protocol.nim"
+  exec "nim c -r --hints:off --mm:orc --outdir:build tests/backends/noop/test_recording.nim"
   exec "nim c -r --hints:off --mm:orc --outdir:build tests/animation/test_easing.nim"
   exec "nim c -r --hints:off --mm:orc --outdir:build tests/animation/test_keyed_runtime.nim"
   exec "nim c -r --hints:off --mm:orc --outdir:build tests/animation/test_linear_engine.nim"
