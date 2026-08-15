@@ -14,5 +14,6 @@ requires "nim >= 2.0.0"
 
 # Run the test suite. `nimble test` -> `make test` -> ralph's VERIFY step all route here.
 task test, "Run the spliney test suite":
+  exec "nim check --hints:off --mm:orc tests/contracts/public_consumer.nim"
   # --outdir:build keeps compiled test binaries out of the source tree (build/ is gitignored).
   exec "nim c -r --hints:off --mm:orc --outdir:build tests/test_smoke.nim"

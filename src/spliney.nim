@@ -9,6 +9,10 @@
 ## Design reference: `docs/reference/rive-runtime-reference.md`.
 ## Task graph: `bd ready` (Beads).
 
+import spliney/contracts
+
+export contracts
+
 const splineyVersion* = "0.1.0"
   ## The spliney runtime version. Keep in sync with `spliney.nimble`.
 
