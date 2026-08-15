@@ -7,9 +7,11 @@
 import spliney/animation/engine/linear
 import spliney/errors
 import spliney/io/loader
+import spliney/render/protocol
 import spliney/scene/artboard
 
 export errors
+export protocol
 
 type
   Vec2* = object
@@ -50,9 +52,6 @@ type
     sceneCount: int
     resourceCount: int
 
-  PreparedImage* = ref object of RootObj
-    ## Backend-owned decoded/uploaded image handle.
-
   PreparedResources* = ref object
     ## Shared decoded/backend resources prepared while a context is valid.
     closed: bool
@@ -65,36 +64,6 @@ type
     closed: bool
     owner: ImportedRiveFile
     runtime: ArtboardInstance
-
-  ResourceFactory* = ref object of RootObj
-    ## Backend-defined resource acquisition seam. Concrete methods are frozen
-    ## by ADR 0003: adapters receive stable asset identity, immutable compressed
-    ## bytes owned by the file, and expected dimensions; backend types stay out.
-
-  RenderSink* = ref object of RootObj
-    ## Backend-neutral draw destination. Concrete command methods live in the
-    ## render protocol module and do not expose Naylib/Raylib through core.
-
-method prepareEmbeddedPng*(factory: ResourceFactory; assetIndex: uint32;
-    name: string; compressedBytes: openArray[byte]; expectedWidth,
-    expectedHeight: uint32): SplineyResult[PreparedImage] {.base.} =
-  discard factory
-  discard name
-  discard compressedBytes
-  discard expectedWidth
-  discard expectedHeight
-  err[PreparedImage](SplineyError(
-    category: ErrorCategory.unsupportedContent,
-    stage: ErrorStage.resourceAcquisition,
-    message: "resource factory does not prepare embedded PNG images",
-    context: ErrorContext(objectTypeKey: 105, propertyKey: 212,
-      assetId: assetIndex.int64, animationIndex: -1)))
-
-method releasePreparedImage*(factory: ResourceFactory;
-    image: PreparedImage): SplineyStatus {.base.} =
-  discard factory
-  discard image
-  okStatus()
 
 proc contractPending[T](stage: ErrorStage; label = ""): SplineyResult[T] =
   err[T](SplineyError(

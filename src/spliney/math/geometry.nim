@@ -50,13 +50,14 @@ proc distanceSquared*(a, b: Vec2D): float32 = (a - b).lengthSquared
 proc distance*(a, b: Vec2D): float32 = (a - b).length
 
 proc translationMat2D*(x, y: SomeNumber): Mat2D =
-  mat2D(1, 0, 0, 1, x, y)
-proc scaleMat2D*(x, y: SomeNumber): Mat2D = mat2D(x, 0, 0, y, 0, 0)
+  mat2D(1'f32, 0'f32, 0'f32, 1'f32, x.float32, y.float32)
+proc scaleMat2D*(x, y: SomeNumber): Mat2D =
+  mat2D(x.float32, 0'f32, 0'f32, y.float32, 0'f32, 0'f32)
 proc rotationMat2D*(radians: float32): Mat2D =
   if radians == 0: return IdentityMat2D
   let sine = sin(radians)
   let cosine = cos(radians)
-  mat2D(cosine, sine, -sine, cosine, 0, 0)
+  mat2D(cosine, sine, -sine, cosine, 0'f32, 0'f32)
 
 proc `*`*(a, b: Mat2D): Mat2D =
   let av = a.values
