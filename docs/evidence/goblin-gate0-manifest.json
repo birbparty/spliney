@@ -15,14 +15,19 @@
   "probeSources": {
     "tools/rive_wire_audit.nim": "5bfb5a6d87684190c476be95b8e4cc9f940cee8103bf315adca32df49feac7d6",
     "tools/run_rive_wire_audit.sh": "3f2d374a95918ac04ad58c1b6dff2a4c16f667f7383eea77f278448b9189f5d3",
-    "tools/rive_oracle_probe/main.cpp": "a171bd5a70e2fcb0220d3345f74a790abc9fb03e034b7aecf1e3832eae94e673",
+    "tools/rive_oracle_probe/main.cpp": "2b2179bfa14b8c02a4dcdc10e0bbf704b8f3b77e629f8d15408a438618172e9f",
     "tools/rive_oracle_probe/premake5.lua": "8c0e9f4e871b7c396904281e229a92a02b1a92b829c895bd71a6bce05a25389d",
     "tools/run_rive_oracle_probe.sh": "94ab4e0e0ff02d758d5624feb790921b60653e62ce43bf59c8e948bdbf3908fb",
-    "tools/verify_goblin_gate0.nim": "d3916b10fda9d8b4a1fd71aa516a59a7fa219d9c129763ed25fd6643d69add19"
+    "tools/verify_goblin_gate0.nim": "d3916b10fda9d8b4a1fd71aa516a59a7fa219d9c129763ed25fd6643d69add19",
+    "tools/raylib_render_spike.nim": "3bd317b26c6c68c300d01486de10097877f4733d86111fd249848ae28167da66",
+    "tools/run_raylib_render_spike.sh": "7b64b9567ab7b6fd8afa1392f0c56e844e26d52f915090a6326a57c9ac87d9c2"
   },
   "privateEvidence": {
     "wireAuditSha256": "e761c71cc00d3d249c2076aa229fa223c58cd2a22deff3bde888a8ee4e015ad5",
-    "oracleSha256": "c264ff0b761990f228535db4447a9e80fb1624288335d45b94b335e22d3addc9",
+    "oracleSha256": "778a46c266d66dcc16c484cd6931505059d86ba7ed9f9e43f540c869a8a7406c",
+    "representativeReferenceSha256": "587e665e43eb69c6278275b51028cefe6763f3029171b0196b1ffaf4b524ed80",
+    "raylibMetricsSha256": "c60f9b4630d6b3cd769e1f7305a066c9e3fd211ff74fc64ef13426121dd981eb",
+    "raylibCaptureSha256": "6631e04ffecdfc270dd97828ac04a0f62ebfb4b954a438f826da2a22677a6a2f",
     "committed": false,
     "reproducibility": "two runs byte-for-byte identical"
   },
@@ -130,6 +135,21 @@
   "decisionsSupportedByEvidence": {
     "layoutComponentStyle": "inert for default artboard bounds and visible output at the fixed official states",
     "stateMachine": "retained as importable metadata; not required for linear playback",
-    "timeline1StepPolicy": "retain both direct authoritative and bounded-positive-step oracles; do not substitute one for the other"
+    "timeline1StepPolicy": "retain both direct authoritative and bounded-positive-step oracles; do not substitute one for the other",
+    "macosRenderRoute": "direct rlgl textured triangles; CPU raster-to-texture WP3.4 inactive"
+  },
+  "macosRenderDecision": {
+    "adr": "docs/adr/0002-macos-textured-mesh-renderer.md",
+    "naylibVersion": "26.08.0",
+    "naylibRevision": "19dd4e7e34c705c677e89b3a6516846c9f2e0125",
+    "raylibBundledSourceVersion": "5.6-dev",
+    "knownPixelMaxChannelError": 2,
+    "representativeForegroundPixels": 10062,
+    "referenceForegroundPixels": 10134,
+    "intersectionOverUnion": 0.9823321554770318,
+    "meanAbsoluteRgbError": 4.29485669414998,
+    "pixelsOver32": 175,
+    "reproducibility": "two metrics and capture runs byte-for-byte identical",
+    "cpuRasterWp3_4Active": false
   }
 }

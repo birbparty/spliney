@@ -163,6 +163,7 @@ std::string sha256File(const std::string &path) {
 
 struct ImageInfo {
   const rive::RenderImage *image = nullptr;
+  std::vector<uint8_t> encoded;
   size_t encodedBytes = 0;
   std::string encodedSha;
   int width = 0;
@@ -176,8 +177,9 @@ public:
   rive::rcp<rive::RenderImage>
   decodeImage(rive::Span<const uint8_t> encoded) override {
     auto image = rive::CGFactory::decodeImage(encoded);
-    images.push_back({image.get(), encoded.size(),
-                      sha256(encoded.data(), encoded.size()),
+    images.push_back({image.get(),
+                      std::vector<uint8_t>(encoded.begin(), encoded.end()),
+                      encoded.size(), sha256(encoded.data(), encoded.size()),
                       image ? image->width() : 0, image ? image->height() : 0});
     return image;
   }
@@ -210,6 +212,12 @@ struct DrawCommand {
   std::vector<rive::Vec2D> vertices;
   std::vector<rive::Vec2D> uvs;
   std::vector<uint16_t> indices;
+  const rive::RenderImage *image = nullptr;
+  rive::ImageSampler imageSampler;
+  rive::BlendMode blend = rive::BlendMode::srcOver;
+  rive::rcp<rive::RenderBuffer> vertexBuffer;
+  rive::rcp<rive::RenderBuffer> uvBuffer;
+  rive::rcp<rive::RenderBuffer> indexBuffer;
 };
 
 class RecordingRenderer : public rive::Renderer {
@@ -253,6 +261,9 @@ public:
                  rive::BlendMode blend, float opacity) override {
     DrawCommand command;
     command.kind = "image";
+    command.image = image;
+    command.imageSampler = sampler;
+    command.blend = blend;
     command.imageIndex = m_factory.imageIndex(image);
     command.transform = m_stack.back().transform;
     command.opacity = opacity * m_stack.back().opacity;
@@ -277,6 +288,12 @@ public:
     }
     DrawCommand command;
     command.kind = "imageMesh";
+    command.image = image;
+    command.imageSampler = sampler;
+    command.blend = blend;
+    command.vertexBuffer = vertices;
+    command.uvBuffer = uvs;
+    command.indexBuffer = indices;
     command.imageIndex = m_factory.imageIndex(image);
     command.transform = m_stack.back().transform;
     command.opacity = opacity * m_stack.back().opacity;
@@ -574,6 +591,73 @@ bool writePng(const std::string &path, const std::vector<uint8_t> &pixels) {
   return ok;
 }
 
+bool writeBytes(const std::string &path, const std::vector<uint8_t> &bytes) {
+  std::ofstream output(path, std::ios::binary);
+  return output &&
+         (bytes.empty() || static_cast<bool>(output.write(
+                               reinterpret_cast<const char *>(bytes.data()),
+                               static_cast<std::streamsize>(bytes.size()))));
+}
+
+Frame captureRepresentative(rive::File *file, const OracleFactory &factory,
+                            const std::string &referenceDir) {
+  auto artboard = file->artboardAt(0);
+  auto scene = artboard->animationAt(0);
+  settleScene(scene.get(), 0, true);
+  RecordingRenderer recording(factory);
+  recording.save();
+  recording.align(rive::Fit::contain, rive::Alignment::center,
+                  rive::AABB(0, 0, kWidth, kHeight), artboard->bounds());
+  artboard->draw(&recording);
+  recording.restore();
+  const auto command =
+      std::find_if(recording.commands.begin(), recording.commands.end(),
+                   [](const DrawCommand &candidate) {
+                     return candidate.kind == "imageMesh";
+                   });
+  if (command == recording.commands.end() || !command->image ||
+      !command->vertexBuffer || !command->uvBuffer || !command->indexBuffer) {
+    std::cerr << "representative capture: image mesh not found\n";
+    std::exit(10);
+  }
+
+  Frame frame;
+  frame.filename = "representative-image-mesh.png";
+  frame.pixels.resize(static_cast<size_t>(kWidth * kHeight * 4));
+  for (size_t offset = 0; offset < frame.pixels.size(); offset += 4)
+    std::copy(kBackground, kBackground + 4, frame.pixels.begin() + offset);
+  auto space = CGColorSpaceCreateDeviceRGB();
+  const auto info = static_cast<uint32_t>(kCGBitmapByteOrder32Big) |
+                    static_cast<uint32_t>(kCGImageAlphaPremultipliedLast);
+  auto context = CGBitmapContextCreate(frame.pixels.data(), kWidth, kHeight, 8,
+                                       kWidth * 4, space, info);
+  if (!context) {
+    std::cerr << "representative capture: failed to create bitmap context\n";
+    std::exit(10);
+  }
+  {
+    rive::CGRenderer renderer(context, kWidth, kHeight);
+    renderer.save();
+    renderer.transform(command->transform);
+    renderer.drawImageMesh(
+        command->image, command->imageSampler, command->vertexBuffer,
+        command->uvBuffer, command->indexBuffer, command->vertices.size(),
+        command->indices.size(), command->blend, command->opacity);
+    renderer.restore();
+  }
+  CGContextFlush(context);
+  CGContextRelease(context);
+  CGColorSpaceRelease(space);
+  frame.roi = findRoi(frame.pixels);
+  const std::string path = referenceDir + "/" + frame.filename;
+  if (!writePng(path, frame.pixels)) {
+    std::cerr << "representative capture: failed to write PNG\n";
+    std::exit(10);
+  }
+  frame.sha = sha256File(path);
+  return frame;
+}
+
 Frame capture(rive::File *file, size_t animationIndex, double seconds,
               bool bounded, const std::string &filename,
               const std::string &referenceDir) {
@@ -647,6 +731,17 @@ int main(int argc, const char *argv[]) {
   const double targets[] = {2.0,
                             definition->animation(1)->durationSeconds() / 2.0,
                             definition->animation(2)->durationSeconds() / 2.0};
+  for (size_t index = 0; index < factory.images.size(); ++index) {
+    std::ostringstream filename;
+    filename << options.referenceDir << "/embedded-image-" << std::setw(2)
+             << std::setfill('0') << index << ".png";
+    if (!writeBytes(filename.str(), factory.images[index].encoded)) {
+      std::cerr << "embedded image: failed to write payload\n";
+      return 6;
+    }
+  }
+  const auto representative =
+      captureRepresentative(file.get(), factory, options.referenceDir);
 
   std::ofstream out(options.output);
   if (!out)
@@ -663,10 +758,20 @@ int main(int argc, const char *argv[]) {
     const auto &image = factory.images[index];
     out << "{\"index\":" << index << ",\"encodedBytes\":" << image.encodedBytes
         << ",\"encodedSha256\":\"" << image.encodedSha
+        << "\",\"encodedFilename\":\"embedded-image-" << std::setw(2)
+        << std::setfill('0') << index << ".png"
         << "\",\"width\":" << image.width << ",\"height\":" << image.height
         << '}';
   }
-  out << "],\n  \"animations\": [\n";
+  out << "],\n  \"representativeSnapshot\":{\"animationIndex\":0,"
+         "\"stateSeconds\":0,\"drawCommandIndex\":1,\"filename\":\""
+      << representative.filename << "\",\"sha256\":\"" << representative.sha
+      << "\",\"foregroundPixels\":" << representative.roi.foregroundPixels
+      << ",\"roi\":{\"left\":" << representative.roi.left
+      << ",\"top\":" << representative.roi.top
+      << ",\"right\":" << representative.roi.right
+      << ",\"bottom\":" << representative.roi.bottom
+      << "}},\n  \"animations\": [\n";
   for (size_t animationIndex = 0; animationIndex < 3; ++animationIndex) {
     if (animationIndex)
       out << ",\n";

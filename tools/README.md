@@ -23,14 +23,28 @@ Only redistributable summary manifests and their hashes may be committed.
 runtime and records full dynamic state for all three animations: bone/root-bone
 matrices, constraint inputs and outputs, every reachable animated property,
 visible fill state, complete textured-mesh draw buffers, and both bounded-step
-and single-advance CoreGraphics frames. It runs twice and requires every JSON
-and PNG byte to match. Its inputs are also explicit:
+and single-advance CoreGraphics frames. For downstream private tests it also
+exports the original 13 embedded PNG payloads and an isolated CoreGraphics
+rendering of one representative exact-asset image mesh. It runs twice and
+requires every JSON and PNG byte to match. Its inputs are also explicit:
 
 ```bash
 tools/run_rive_oracle_probe.sh \
   --asset /absolute/path/g0bl1ntest.riv \
   --runtime /absolute/path/rive-runtime \
   --output-dir build/private-evidence/goblin-oracle
+```
+
+`run_raylib_render_spike.sh` is the macOS Gate 0 renderer decision experiment.
+It consumes only those explicit private oracle outputs, renders both known RGBA
+pixels and the isolated exact-asset mesh through Naylib/rlgl, enforces the fixed
+ADR 0002 metrics, and byte-compares two finite runs:
+
+```bash
+tools/run_raylib_render_spike.sh \
+  --oracle build/private-evidence/goblin-oracle/first/oracle.json \
+  --reference-dir build/private-evidence/goblin-oracle/first/reference \
+  --output-dir build/private-evidence/raylib-render-spike
 ```
 
 After both probes, enforce the complete Gate 0 evidence floor with:
