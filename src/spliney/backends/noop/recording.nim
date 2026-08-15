@@ -335,6 +335,17 @@ method modulateOpacity*(renderer: NoOpRenderer; opacity: float32) =
     transform: renderer.state.transform,
     opacity: renderer.state.opacity))
 
+method renderStatus*(renderer: NoOpRenderer): SplineyStatus =
+  if renderer.invariantErrors.len == 0:
+    okStatus()
+  else:
+    errStatus(SplineyError(
+      category: ErrorCategory.render,
+      stage: ErrorStage.drawSubmission,
+      message: renderer.invariantErrors[0],
+      context: ErrorContext(objectTypeKey: -1, propertyKey: -1,
+        assetId: -1, animationIndex: -1)))
+
 proc stackDepth*(renderer: NoOpRenderer): int = renderer.stack.len
 
 proc reset*(renderer: NoOpRenderer) =

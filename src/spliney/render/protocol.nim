@@ -264,6 +264,11 @@ method modulateOpacity*(renderer: Renderer; opacity: float32) {.base.} =
   discard renderer
   discard opacity
 
+method renderStatus*(renderer: Renderer): SplineyStatus {.base.} =
+  ## Optional backend failure channel for the otherwise void Rive operations.
+  discard renderer
+  okStatus()
+
 proc translate*(renderer: Renderer; x, y: float32) =
   renderer.transform(translationMat2D(x, y))
 proc scale*(renderer: Renderer; x, y: float32) =

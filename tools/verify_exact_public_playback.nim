@@ -4,11 +4,13 @@ import std/os
 
 import spliney
 import spliney/backends/noop/recording
+import spliney/math/geometry
 
 type
   CountingImage = ref object of NoOpRenderImage
   CountingFactory = ref object of NoOpFactory
     prepared, released: int
+    imageSizes: seq[array[2, float32]]
 
 proc uint32Be(bytes: openArray[byte]; offset: int): uint32 =
   (bytes[offset].uint32 shl 24) or (bytes[offset + 1].uint32 shl 16) or
@@ -25,6 +27,7 @@ method prepareEmbeddedPng(factory: CountingFactory; assetIndex: uint32;
   doAssert compressedBytes.uint32Be(20) == expectedHeight
   doAssert assetIndex == factory.prepared.uint32
   inc factory.prepared
+  factory.imageSizes.add [expectedWidth.float32, expectedHeight.float32]
   let image = CountingImage(assetIndex: assetIndex)
   image.configureImage(expectedWidth.int, expectedHeight.int)
   ok[PreparedImage](image)
@@ -95,6 +98,51 @@ for command in renderer.commands:
 doAssert pathCount == 1
 doAssert meshCount == 3
 doAssert imageCount > 0
+
+let translatedRenderer = newNoOpRenderer()
+let translatedDraw = replaceable.draw(resources.value, translatedRenderer,
+  Rect(minX: 0, minY: 0, maxX: 960, maxY: 540),
+  spliney.Vec2(x: 100, y: 0))
+doAssert translatedDraw.isOk, translatedDraw.error.message
+var baseCommands, translatedCommands: seq[RecordedCommand]
+for command in renderer.commands:
+  if command.kind in {RecordedCommandKind.drawPath,
+      RecordedCommandKind.drawImage, RecordedCommandKind.drawImageMesh}:
+    baseCommands.add(command)
+for command in translatedRenderer.commands:
+  if command.kind in {RecordedCommandKind.drawPath,
+      RecordedCommandKind.drawImage, RecordedCommandKind.drawImageMesh}:
+    translatedCommands.add(command)
+doAssert translatedCommands.len == baseCommands.len
+for index, base in baseCommands:
+  let translated = translatedCommands[index]
+  doAssert translated.kind == base.kind
+  for matrixIndex in 0 .. 3:
+    doAssert abs(translated.transform.values[matrixIndex] -
+      base.transform.values[matrixIndex]) < 0.0001
+  doAssert abs(translated.transform.values[4] -
+    base.transform.values[4] - 100) < 0.0001
+  doAssert abs(translated.transform.values[5] -
+    base.transform.values[5]) < 0.0001
+  var points: seq[float32]
+  case base.kind
+  of RecordedCommandKind.drawPath:
+    points = base.pathPoints
+  of RecordedCommandKind.drawImageMesh:
+    points = base.vertices
+  of RecordedCommandKind.drawImage:
+    let imageSize = factory.imageSizes[base.resourceId.int]
+    points = @[0'f32, 0, imageSize[0], 0, imageSize[0], imageSize[1],
+      0, imageSize[1]]
+  else:
+    doAssert false
+  for pointIndex in countup(0, points.high, 2):
+    let basePoint = base.transform * vec2(points[pointIndex],
+      points[pointIndex + 1])
+    let translatedPoint = translated.transform * vec2(points[pointIndex],
+      points[pointIndex + 1])
+    doAssert abs(translatedPoint.x - basePoint.x - 100) < 0.0001
+    doAssert abs(translatedPoint.y - basePoint.y) < 0.0001
 
 let prematureClose = imported.value.close()
 doAssert not prematureClose.isOk

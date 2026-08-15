@@ -1,6 +1,7 @@
 import std/[sequtils, unittest]
 
 import spliney/backends/noop/recording
+import spliney/errors
 import spliney/math/geometry
 import spliney/render/protocol
 
@@ -77,6 +78,11 @@ suite "no-op recording backend":
   test "reports restore underflow without corrupting later recording":
     let renderer = newNoOpRenderer()
     renderer.restore()
+    let status = renderer.renderStatus()
+    check not status.isOk
+    check status.error.category == ErrorCategory.render
+    check status.error.stage == ErrorStage.drawSubmission
+    check status.error.message == "renderer restore underflow"
     renderer.save()
     renderer.restore()
     check renderer.invariantErrors == @["renderer restore underflow"]

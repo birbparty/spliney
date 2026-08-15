@@ -90,3 +90,23 @@ nim c -r --hints:off --mm:orc tools/verify_goblin_gate0.nim -- \
   --oracle:build/private-evidence/goblin-oracle/first/oracle.json \
   --baseline:/absolute/path/spliney-goblin-demo/docs/asset-manifest.json
 ```
+
+`run_exact_raylib_capture.sh` is the Gate 4 public-facade macOS capture. It
+requires the exact private asset and pinned Gate 0 oracle outputs, builds the
+opt-in Naylib adapter with ORC, renders both required states for all three
+animations, and enforces the full pixel and 100-pixel translation policy. The
+script runs the finite harness twice and requires every emitted PNG and JSON
+byte to match:
+
+```bash
+tools/run_exact_raylib_capture.sh \
+  --asset /absolute/path/g0bl1ntest.riv \
+  --oracle build/private-evidence/goblin-oracle/first/oracle.json \
+  --reference-dir build/private-evidence/goblin-oracle/first/reference \
+  --output-dir build/private-evidence/exact-raylib-capture
+```
+
+The adapter is intentionally not exported by the core `spliney` barrel. A
+Naylib consumer opts in with `-d:useNaylib`, imports
+`spliney/backends/raylib/renderer`, initializes its Raylib window before
+preparing images, and closes prepared resources before closing the window.

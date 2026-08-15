@@ -282,8 +282,11 @@ proc draw*(scene: PlayableScene; resources: PreparedResources;
         assetId: -1, animationIndex: scene.runtime.animationIndex.int32)))
   let presentation = translationMat2D(screenTranslation.x,
     screenTranslation.y) * containFit(artboardBounds, destinationBounds)
-  scene.runtime.exact.emitDrawCommands(resources.renderFactory,
-    Renderer(renderer), resources.renderImages, artboardBounds, presentation)
+  let concreteRenderer = Renderer(renderer)
+  let emitted = scene.runtime.exact.emitDrawCommands(resources.renderFactory,
+    concreteRenderer, resources.renderImages, artboardBounds, presentation)
+  if not emitted.isOk: return emitted
+  concreteRenderer.renderStatus()
 
 proc close*(scene: PlayableScene): SplineyStatus =
   ## Idempotently releases mutable scene state. Safe on nil.
