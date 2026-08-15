@@ -13,6 +13,9 @@ const
     ## The runtime reads a new uint32 after four 2-bit ToC entries. Only the
     ## low eight bits of each word carry field codes.
 
+  TocBitsPerProperty* = 2
+  TocBackingTypeMask* = 3'u32
+
 type WireFieldKind* {.pure.} = enum
   ## Forward-compatibility field codes from RuntimeHeader::read and the core
   ## field types at the pinned official runtime revision.

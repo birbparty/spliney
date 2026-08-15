@@ -31,6 +31,17 @@ tools/run_rive_wire_audit.sh \
 The generated private-fixture audit stays under the ignored `build/` tree.
 Only redistributable summary manifests and their hashes may be committed.
 
+`verify_rive_wire_loader.nim` compares the shipping bounds-checked loader's
+entire flat stream against the private Gate 0 audit, including every byte
+offset, type, property, wire kind, non-byte value, and embedded byte length:
+
+```bash
+nim c -r --hints:off --mm:orc --outdir:build \
+  tools/verify_rive_wire_loader.nim -- \
+  --asset /absolute/path/g0bl1ntest.riv \
+  --audit build/private-evidence/goblin-wire-audit.json
+```
+
 `run_rive_oracle_probe.sh` builds an isolated copy of the pinned official
 runtime and records full dynamic state for all three animations: bone/root-bone
 matrices, constraint inputs and outputs, every reachable animated property,
