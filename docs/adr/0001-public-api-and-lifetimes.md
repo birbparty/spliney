@@ -45,6 +45,30 @@ replacement constructs, applies the authored start pose, and settles a new
 scene before swapping it into the caller variable. On any failure the old scene
 must remain structurally and visually in lockstep with an untouched control.
 
+The package is compiled with Nim ORC. Rive's owning `rcp<T>` handles map to
+Nim `ref object` references rather than raw pointers or manual reference-count
+operations. Parent/child and dependency cycles are therefore collector-owned;
+scene teardown clears its aggregate roots, but correctness does not depend on
+hand-breaking every ordinary Nim reference cycle. Borrowed C++ pointers map to
+call-scoped Nim parameters or indices into a scene-owned table and must never be
+stored past the owner's lifetime. Immutable definitions and compressed image
+bytes may be shared by scenes; all mutable transforms, keyed properties,
+solver state, and deformed vertices are cloned per scene.
+
+Factory-minted native resources have a stricter contract than ordinary
+`rcp<T>` values. A factory returns a single owning Nim reference whose enclosing
+`PreparedResources` records successful acquisition immediately. Resources are
+released in reverse acquisition order by explicit, idempotent `close` while the
+backend context is live. Partial construction follows the same rollback path.
+No finalizer performs the primary GPU cleanup, and renderer calls only borrow
+resource references for the duration of the call.
+
+Steady-state `advanceAndApply` and `draw` reuse scene-owned solver buffers,
+deformed-vertex arrays, renderer stacks, and backend command storage. Capacity
+may grow during construction or the first representative frame, but the design
+does not allocate one owning graph or native resource per frame. Backend
+implementations may maintain reusable scratch storage behind the renderer seam.
+
 Failures are returned as `SplineyResult[T]` or `SplineyStatus`. `SplineyError`
 has a closed `ErrorCategory`, stable `ErrorStage`, sanitized message, and typed
 context fields for labels, offsets, object/property keys, assets, and
@@ -90,6 +114,13 @@ removes an otherwise invisible caller-lifetime hazard. Returned typed errors
 are stable across compiler/runtime message changes. Explicit close preserves
 ORC convenience for ordinary object graphs without delegating context-bound
 GPU destruction to nondeterministic collection.
+
+The selected macOS dependency route was compiled and executed with
+`--mm:orc -d:useNaylib` during Gate 0. It pins Naylib 26.08.0 at revision
+`19dd4e7e34c705c677e89b3a6516846c9f2e0125` and bundled Raylib 5.6-dev; the
+repeatable decode/upload and textured-triangle probes cover the actual selected
+path. Boxy and `raylib_console` are not dependencies of the macOS deliverable,
+so compatibility claims for those inactive routes are deliberately deferred.
 
 ## Alternatives considered
 
