@@ -37,6 +37,18 @@ suite "Rive-compatible core geometry":
     check inverse == previous
     check scaleMat2D(0, 1).inverseOrIdentity == IdentityMat2D
 
+  test "transform decomposition and composition match Rive":
+    let components = TransformComponents(
+      x: 12, y: -3, scaleX: 2, scaleY: -0.75,
+      rotation: 0.42, skew: 0.18)
+    let roundTrip = components.compose.decompose
+    check close(roundTrip.x, components.x)
+    check close(roundTrip.y, components.y)
+    check close(roundTrip.scaleX, components.scaleX)
+    check close(roundTrip.scaleY, components.scaleY)
+    check close(roundTrip.rotation, components.rotation)
+    check close(roundTrip.skew, arctan(components.skew))
+
   test "bounds and contain fit cover translated aspect ratios":
     let bounds = aabb(-10, -20, 30, 20)
     check bounds.width == 40

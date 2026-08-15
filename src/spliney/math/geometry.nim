@@ -14,6 +14,12 @@ type
   AABB* = object
     minX*, minY*, maxX*, maxY*: float32
 
+  TransformComponents* = object
+    x*, y*: float32
+    scaleX*, scaleY*: float32
+    rotation*: float32
+    skew*: float32
+
 proc vec2*(x, y: SomeNumber): Vec2D = Vec2D(x: x.float32, y: y.float32)
 proc mat2D*(xx, xy, yx, yy, tx, ty: SomeNumber): Mat2D =
   Mat2D(values: [xx.float32, xy.float32, yx.float32, yy.float32,
@@ -101,6 +107,33 @@ proc inverse*(matrix: Mat2D; destination: var Mat2D): bool =
 proc inverseOrIdentity*(matrix: Mat2D): Mat2D =
   result = IdentityMat2D
   discard matrix.inverse(result)
+
+proc decompose*(matrix: Mat2D): TransformComponents =
+  let m0 = matrix.values[0]
+  let m1 = matrix.values[1]
+  let m2 = matrix.values[2]
+  let m3 = matrix.values[3]
+  let denominator = m0 * m0 + m1 * m1
+  let scaleX = sqrt(denominator)
+  TransformComponents(
+    x: matrix.values[4],
+    y: matrix.values[5],
+    scaleX: scaleX,
+    scaleY: if scaleX == 0: 0 else: (m0 * m3 - m2 * m1) / scaleX,
+    rotation: arctan2(m1, m0),
+    skew: arctan2(m0 * m2 + m1 * m3, denominator))
+
+proc compose*(components: TransformComponents): Mat2D =
+  result = rotationMat2D(components.rotation)
+  result.values[4] = components.x
+  result.values[5] = components.y
+  result.values[0] *= components.scaleX
+  result.values[1] *= components.scaleX
+  result.values[2] *= components.scaleY
+  result.values[3] *= components.scaleY
+  if components.skew != 0:
+    result.values[2] = result.values[0] * components.skew + result.values[2]
+    result.values[3] = result.values[1] * components.skew + result.values[3]
 
 proc width*(bounds: AABB): float32 = bounds.maxX - bounds.minX
 proc height*(bounds: AABB): float32 = bounds.maxY - bounds.minY

@@ -77,16 +77,77 @@ if paramCount() == 2:
   let relativeTolerance = oracle["tolerance"]["relative"].getFloat
 
   proc verifyState(instance: ArtboardInstance; state: JsonNode) =
+    proc verifyNumber(actual: float32; expected: JsonNode; label: string) =
+      let wanted = expected.getFloat
+      let tolerance = absoluteTolerance + relativeTolerance * abs(wanted)
+      doAssert abs(actual.float64 - wanted) <= tolerance,
+        &"{label}: actual={actual} expected={wanted} tolerance={tolerance}"
+
+    proc verifyMatrix(actual: array[6, float32]; expected: JsonNode;
+        label: string) =
+      for index in 0 .. 5:
+        verifyNumber(actual[index], expected[index], &"{label}[{index}]")
+
     for expected in state["animatedProperties"]:
       let objectId = expected["objectId"].getInt.uint32
       let propertyKey = expected["propertyKey"].getInt.uint32
       let actual = instance.animatedFloat(objectId, propertyKey)
       doAssert actual.isOk, actual.error.message
-      let wanted = expected["value"].getFloat
-      let tolerance = absoluteTolerance + relativeTolerance * abs(wanted)
-      doAssert abs(actual.value.float64 - wanted) <= tolerance,
-        &"animated property mismatch object={objectId} property={propertyKey} " &
-        &"actual={actual.value} expected={wanted} tolerance={tolerance}"
+      verifyNumber(actual.value, expected["value"],
+        &"animated property object={objectId} property={propertyKey}")
+
+    for expected in state["transforms"]:
+      let objectId = expected["objectId"].getInt
+      let component = instance.exact.components[objectId]
+      verifyMatrix(component.worldTransform.values, expected["world"],
+        &"world transform object={objectId}")
+
+    for expected in state["constraints"]:
+      let objectId = expected["objectId"].getInt
+      let component = instance.exact.components[objectId]
+      verifyNumber(component.strength, expected["strength"],
+        &"constraint strength object={objectId}")
+      verifyMatrix(component.parent.worldTransform.values,
+        expected["parentWorld"], &"constraint parent object={objectId}")
+      verifyMatrix(component.target.worldTransform.values,
+        expected["targetWorld"], &"constraint target object={objectId}")
+
+    doAssert state["solverObjects"].len == 199
+    for expected in state["solverObjects"]:
+      let objectId = expected["objectId"].getInt
+      let component = instance.exact.components[objectId]
+      doAssert component.typeKey == expected["typeKey"].getInt.uint32
+      doAssert component.parentId == expected["parentId"].getInt.uint32
+      case expected["kind"].getStr
+      of "mesh":
+        let skinId = if component.skin.isNil: 0'u32 else: component.skin.objectId
+        doAssert skinId == expected["skinId"].getInt.uint32
+      of "skin":
+        let bindValues = component.bindTransform.values
+        verifyMatrix([bindValues[0], bindValues[2], bindValues[1], bindValues[3],
+          bindValues[4], bindValues[5]],
+          expected["bind"],
+          &"skin bind object={objectId}")
+      of "tendon":
+        doAssert component.boneId == expected["boneId"].getInt.uint32
+        verifyMatrix(component.inverseBind.values, expected["inverseBind"],
+          &"tendon inverse bind object={objectId}")
+      of "contourMeshVertex":
+        verifyNumber(component.vertexX, expected["position"][0],
+          &"vertex x object={objectId}")
+        verifyNumber(component.vertexY, expected["position"][1],
+          &"vertex y object={objectId}")
+        verifyNumber(component.u, expected["uv"][0], &"vertex u object={objectId}")
+        verifyNumber(component.v, expected["uv"][1], &"vertex v object={objectId}")
+      of "weight":
+        doAssert component.weightValues == expected["values"].getInt.uint32
+        doAssert component.weightIndices == expected["indices"].getInt.uint32
+        verifyNumber(component.parent.renderTranslation.x,
+          expected["translation"][0], &"deformed x object={objectId}")
+        verifyNumber(component.parent.renderTranslation.y,
+          expected["translation"][1], &"deformed y object={objectId}")
+      else:
+        doAssert false, "unknown solver object kind"
 
   for animationIndex in 0 ..< oracle["animations"].len:
     let animationOracle = oracle["animations"][animationIndex]

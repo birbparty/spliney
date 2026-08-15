@@ -48,10 +48,17 @@ type
     wire: WireFile
     artboards: seq[ArtboardDefinition]
     sceneCount: int
+    resourceCount: int
+
+  PreparedImage* = ref object of RootObj
+    ## Backend-owned decoded/uploaded image handle.
 
   PreparedResources* = ref object
     ## Shared decoded/backend resources prepared while a context is valid.
     closed: bool
+    owner: ImportedRiveFile
+    factory: ResourceFactory
+    images: seq[PreparedImage]
 
   PlayableScene* = ref object
     ## Independent mutable artboard, dependency, and animation state.
@@ -67,6 +74,27 @@ type
   RenderSink* = ref object of RootObj
     ## Backend-neutral draw destination. Concrete command methods live in the
     ## render protocol module and do not expose Naylib/Raylib through core.
+
+method prepareEmbeddedPng*(factory: ResourceFactory; assetIndex: uint32;
+    name: string; compressedBytes: openArray[byte]; expectedWidth,
+    expectedHeight: uint32): SplineyResult[PreparedImage] {.base.} =
+  discard factory
+  discard name
+  discard compressedBytes
+  discard expectedWidth
+  discard expectedHeight
+  err[PreparedImage](SplineyError(
+    category: ErrorCategory.unsupportedContent,
+    stage: ErrorStage.resourceAcquisition,
+    message: "resource factory does not prepare embedded PNG images",
+    context: ErrorContext(objectTypeKey: 105, propertyKey: 212,
+      assetId: assetIndex.int64, animationIndex: -1)))
+
+method releasePreparedImage*(factory: ResourceFactory;
+    image: PreparedImage): SplineyStatus {.base.} =
+  discard factory
+  discard image
+  okStatus()
 
 proc contractPending[T](stage: ErrorStage; label = ""): SplineyResult[T] =
   err[T](SplineyError(
@@ -155,9 +183,38 @@ proc defaultArtboard*(file: ImportedRiveFile): SplineyResult[ArtboardInfo] =
 proc prepareResources*(file: ImportedRiveFile; factory: ResourceFactory):
     SplineyResult[PreparedResources] =
   ## Decodes/uploads shared resources after a backend context exists.
-  discard file
-  discard factory
-  contractPending[PreparedResources](ErrorStage.resourceAcquisition)
+  if file.isNil or file.closed:
+    return lifecycleError[PreparedResources]("imported Rive file is closed",
+      ErrorStage.resourceAcquisition)
+  if factory.isNil:
+    return lifecycleError[PreparedResources]("resource factory is nil",
+      ErrorStage.resourceAcquisition, file.label)
+  var images: seq[PreparedImage]
+  let embedded = file.artboards[0].imageAssets
+  for asset in embedded:
+    let prepared = if asset.compressedBytes.len == 0:
+      factory.prepareEmbeddedPng(asset.index, asset.name, [],
+        asset.width.uint32, asset.height.uint32)
+    else:
+      factory.prepareEmbeddedPng(asset.index, asset.name,
+        asset.compressedBytes.toOpenArrayByte(0, asset.compressedBytes.high),
+        asset.width.uint32, asset.height.uint32)
+    if not prepared.isOk:
+      for index in countdown(images.high, 0):
+        discard factory.releasePreparedImage(images[index])
+      return err[PreparedResources](prepared.error)
+    if prepared.value.isNil:
+      for index in countdown(images.high, 0):
+        discard factory.releasePreparedImage(images[index])
+      return err[PreparedResources](SplineyError(
+        category: ErrorCategory.backend,
+        stage: ErrorStage.resourceAcquisition,
+        message: "resource factory returned a nil prepared image",
+        context: ErrorContext(label: file.label, objectTypeKey: 105,
+          propertyKey: 212, assetId: asset.index.int64, animationIndex: -1)))
+    images.add(prepared.value)
+  inc file.resourceCount
+  ok(PreparedResources(owner: file, factory: factory, images: move(images)))
 
 proc newScene*(file: ImportedRiveFile; artboardIndex, animationIndex: int):
     SplineyResult[PlayableScene] =
@@ -230,15 +287,27 @@ proc close*(resources: PreparedResources): SplineyStatus =
   ## backend context closes. Safe on nil.
   if resources.isNil or resources.closed: return okStatus()
   resources.closed = true
-  okStatus()
+  var firstFailure: SplineyError
+  var failed = false
+  for index in countdown(resources.images.high, 0):
+    let released = resources.factory.releasePreparedImage(resources.images[index])
+    if not released.isOk and not failed:
+      firstFailure = released.error
+      failed = true
+  resources.images.setLen(0)
+  resources.factory = nil
+  if not resources.owner.isNil and resources.owner.resourceCount > 0:
+    dec resources.owner.resourceCount
+  resources.owner = nil
+  if failed: errStatus(firstFailure) else: okStatus()
 
 proc close*(file: ImportedRiveFile): SplineyStatus =
   ## Idempotently releases immutable definitions after scenes/resources close.
   ## Safe on nil.
   if file.isNil or file.closed: return okStatus()
-  if file.sceneCount != 0:
+  if file.sceneCount != 0 or file.resourceCount != 0:
     return errStatus(lifecycleError[bool](
-      "cannot close imported Rive file with live scenes",
+      "cannot close imported Rive file with live scenes or resources",
       ErrorStage.cleanup, file.label).error)
   file.closed = true
   file.artboards.setLen(0)

@@ -4,6 +4,34 @@ import std/os
 
 import spliney
 
+type
+  CountingImage = ref object of PreparedImage
+  CountingFactory = ref object of ResourceFactory
+    prepared, released: int
+
+proc uint32Be(bytes: openArray[byte]; offset: int): uint32 =
+  (bytes[offset].uint32 shl 24) or (bytes[offset + 1].uint32 shl 16) or
+    (bytes[offset + 2].uint32 shl 8) or bytes[offset + 3].uint32
+
+method prepareEmbeddedPng(factory: CountingFactory; assetIndex: uint32;
+    name: string; compressedBytes: openArray[byte]; expectedWidth,
+    expectedHeight: uint32): SplineyResult[PreparedImage] =
+  doAssert name.len > 0
+  doAssert compressedBytes.len >= 24
+  doAssert compressedBytes[0 .. 7] ==
+    [137'u8, 80, 78, 71, 13, 10, 26, 10]
+  doAssert compressedBytes.uint32Be(16) == expectedWidth
+  doAssert compressedBytes.uint32Be(20) == expectedHeight
+  doAssert assetIndex == factory.prepared.uint32
+  inc factory.prepared
+  ok[PreparedImage](CountingImage())
+
+method releasePreparedImage(factory: CountingFactory;
+    image: PreparedImage): SplineyStatus =
+  doAssert not image.isNil
+  inc factory.released
+  okStatus()
+
 if paramCount() != 1:
   quit "usage: verify_exact_public_playback <exact.riv>"
 
@@ -21,6 +49,11 @@ doAssert info.value.animations[0].speed == 2
 doAssert info.value.animations[0].loopValue == 1
 doAssert info.value.animations[1].name == "Timeline 2"
 doAssert info.value.animations[2].name == "Timeline 3"
+
+let factory = CountingFactory()
+let resources = imported.value.prepareResources(factory)
+doAssert resources.isOk, resources.error.message
+doAssert factory.prepared == 13
 
 let first = imported.value.newScene(0, 0)
 let second = imported.value.newScene(0, 0)
@@ -41,6 +74,7 @@ doAssert not invalidReplacement.isOk
 doAssert replaceable.advanceAndApply(0.1).isOk
 doAssert replaceable.replaceAnimation(1).isOk
 doAssert replaceable.advanceAndApply(0.1).isOk
+doAssert factory.prepared == 13
 
 let prematureClose = imported.value.close()
 doAssert not prematureClose.isOk
@@ -49,6 +83,9 @@ doAssert replaceable.close().isOk
 doAssert replaceable.close().isOk
 doAssert second.value.close().isOk
 doAssert third.value.close().isOk
+doAssert resources.value.close().isOk
+doAssert resources.value.close().isOk
+doAssert factory.released == 13
 doAssert imported.value.close().isOk
 doAssert imported.value.close().isOk
 echo "exact public playback and lifecycle contract verified"

@@ -9,6 +9,7 @@ import spliney/errors
 import spliney/generated/wire_registry
 import spliney/io/loader
 import spliney/scene/dependency
+import spliney/scene/exact_runtime
 
 type
   ArtboardDefinition* = ref object
@@ -18,6 +19,7 @@ type
     name*: string
     width*, height*: float32
     wire*: WireFile
+    imageAssets*: seq[EmbeddedImageDefinition]
     animations*: seq[LinearAnimationDefinition]
 
   MutableObjectInstance* = ref object
@@ -33,6 +35,7 @@ type
     registry*: CorePropertyRegistry
     solver*: DependencySolver
     animation*: LinearAnimationInstance
+    exact*: ExactScene
     settled*: bool
 
   SceneBuildFault* {.pure.} = enum
@@ -98,6 +101,9 @@ proc importArtboards*(wire: WireFile):
   let linearAnimations = importLinearAnimations(wire)
   if not linearAnimations.isOk:
     return err[seq[ArtboardDefinition]](linearAnimations.error)
+  let imageAssets = importEmbeddedImages(wire)
+  if not imageAssets.isOk:
+    return err[seq[ArtboardDefinition]](imageAssets.error)
 
   var artboardIndices: seq[int]
   for index, item in wire.objects:
@@ -149,6 +155,7 @@ proc importArtboards*(wire: WireFile):
       width: width.value,
       height: height.value,
       wire: wire,
+      imageAssets: imageAssets.value,
       animations: animations))
   ok(artboards)
 
@@ -222,13 +229,18 @@ proc cloneArtboard*(definition: ArtboardDefinition; animationIndex: int;
   let animation = newLinearAnimationInstance(selected, registry)
   if not animation.isOk:
     return err[ArtboardInstance](animation.error)
+  let exact = newExactScene(definition.wire, definition.componentWireIndices,
+    definition.imageAssets)
+  if not exact.isOk:
+    return err[ArtboardInstance](exact.error)
   ok(ArtboardInstance(
     definition: definition,
     animationIndex: animationIndex,
     objects: move(objects),
     registry: registry,
     solver: solver,
-    animation: animation.value))
+    animation: animation.value,
+    exact: exact.value))
 
 proc initialSettle*(instance: ArtboardInstance;
     fault = SceneBuildFault.none): SplineyStatus =
@@ -241,6 +253,12 @@ proc initialSettle*(instance: ArtboardInstance;
   let applied = instance.animation.apply()
   if not applied.isOk:
     var failure = applied.error
+    failure.stage = ErrorStage.initialSettle
+    return errStatus(failure)
+  instance.exact.syncAnimated(instance.registry)
+  let exactSettled = instance.exact.settle()
+  if not exactSettled.isOk:
+    var failure = exactSettled.error
     failure.stage = ErrorStage.initialSettle
     return errStatus(failure)
   if fault == SceneBuildFault.settle:
@@ -266,6 +284,10 @@ proc advanceAndApply*(instance: ArtboardInstance; dt: float32): SplineyStatus =
   let advanced = instance.animation.advanceAndApply(dt)
   if not advanced.isOk:
     return errStatus(advanced.error)
+  instance.exact.syncAnimated(instance.registry)
+  let exactSettled = instance.exact.settle()
+  if not exactSettled.isOk:
+    return exactSettled
   let settled = instance.solver.updateComponents()
   if not settled.isOk:
     return errStatus(settled.error)
