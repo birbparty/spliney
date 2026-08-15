@@ -47,6 +47,18 @@ tools/run_raylib_render_spike.sh \
   --output-dir build/private-evidence/raylib-render-spike
 ```
 
+`run_raylib_png_decode_probe.sh` proves ADR 0003's split resource stages. It
+decodes and normalizes all 13 private embedded payloads twice without creating
+a window, byte-compares the RGBA8 outputs, checks corrupt-input error mapping,
+then verifies that the retained CPU images upload after context creation:
+
+```bash
+tools/run_raylib_png_decode_probe.sh \
+  --oracle build/private-evidence/goblin-oracle/first/oracle.json \
+  --reference-dir build/private-evidence/goblin-oracle/first/reference \
+  --output-dir build/private-evidence/raylib-png-decode
+```
+
 After both probes, enforce the complete Gate 0 evidence floor with:
 
 ```bash

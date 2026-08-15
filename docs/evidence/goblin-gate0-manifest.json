@@ -20,7 +20,9 @@
     "tools/run_rive_oracle_probe.sh": "94ab4e0e0ff02d758d5624feb790921b60653e62ce43bf59c8e948bdbf3908fb",
     "tools/verify_goblin_gate0.nim": "d3916b10fda9d8b4a1fd71aa516a59a7fa219d9c129763ed25fd6643d69add19",
     "tools/raylib_render_spike.nim": "3bd317b26c6c68c300d01486de10097877f4733d86111fd249848ae28167da66",
-    "tools/run_raylib_render_spike.sh": "7b64b9567ab7b6fd8afa1392f0c56e844e26d52f915090a6326a57c9ac87d9c2"
+    "tools/run_raylib_render_spike.sh": "7b64b9567ab7b6fd8afa1392f0c56e844e26d52f915090a6326a57c9ac87d9c2",
+    "tools/raylib_png_decode_probe.nim": "77eb7ddfa69ebf370129451098d96b1347576d7edd980e9f6100101cedc84051",
+    "tools/run_raylib_png_decode_probe.sh": "d26673a749bb54761decc9ee5791344305c4da7a5a69ff84f6cf27dbe94d95d9"
   },
   "privateEvidence": {
     "wireAuditSha256": "e761c71cc00d3d249c2076aa229fa223c58cd2a22deff3bde888a8ee4e015ad5",
@@ -28,6 +30,8 @@
     "representativeReferenceSha256": "587e665e43eb69c6278275b51028cefe6763f3029171b0196b1ffaf4b524ed80",
     "raylibMetricsSha256": "c60f9b4630d6b3cd769e1f7305a066c9e3fd211ff74fc64ef13426121dd981eb",
     "raylibCaptureSha256": "6631e04ffecdfc270dd97828ac04a0f62ebfb4b954a438f826da2a22677a6a2f",
+    "pngDecodeReportSha256": "4a9590943d3d57c3e9859f4e0b1e5cdeda0ffc87b8b072d3c4d693ab24ae6e7a",
+    "decodedRgbaHashListSha256": "67a02359ed8b0a125099f4857dd99ecb551cb3bb6ad732b799c130966d8961f2",
     "committed": false,
     "reproducibility": "two runs byte-for-byte identical"
   },
@@ -95,7 +99,27 @@
   "embeddedImages": {
     "count": 13,
     "allDecoded": true,
-    "allEncodedHashesAndDecodedDimensionsRecordedInPrivateOracle": true
+    "allEncodedHashesAndDecodedDimensionsRecordedInPrivateOracle": true,
+    "decoder": "Raylib LoadImageFromMemory (.png/stb_image)",
+    "normalizedFormat": "straight-alpha RGBA8, top-to-bottom",
+    "headlessDecodeRunsByteIdentical": 2,
+    "postWindowUploadCount": 13,
+    "corruptInputError": "assetDecode/imageDecode",
+    "decodedRgbaSha256ByImageIndex": [
+      "ee9106e4086ca5cac9e3b95712e74a1b1d433088399fca7bacc335b63b860e6f",
+      "72b9bb95137b3c66721501b297fb09c30a89378a44dfe0dec36f40c12bd36967",
+      "ff00c2c55c23a9a10a8774f44014307464d74fec06430e9e2b66ee170d7ffb38",
+      "a9293815788c2026a8b32e26d966a74fa836bc4753a028f461c69ecf2a141859",
+      "f4a7e5d7b097ba4cc8847109e5bd9bf8006b67bf924afb677bfc97c97ebc192d",
+      "d4321303ad5538cd883f8c33137aa3cb8d345f29f28844c0a1365a5ca8176b0d",
+      "8c2318811fa5097325989de8c67550b03d2d07310377bf114c606e395775f634",
+      "4966d7bdefbcf44c17af080044c62affe9676a220b8b1bf6c11ec85a140720f3",
+      "beb2ec539886a97752d30e373e04303f174d57fa8fa528d5c762cdfb9354952c",
+      "89e511b0bf7d5d2094924f1fa13ecfb58c64406480f57bbbc0a63f17ee585212",
+      "6b47b086d9d00ec3bc958f42408ef5d602e132c2b3e28cb5f659230446bec5ea",
+      "5b82ff95ade300f77953d8976ed0b430978f9c8b686d28fbfacbb9e910d28a11",
+      "10cb5d63867d63f0041e199b09595af3591e6dcb783b3285de9fe8b57e122f21"
+    ]
   },
   "animations": [
     {

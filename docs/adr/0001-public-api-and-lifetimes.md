@@ -57,6 +57,13 @@ headers. `ResourceFactory` and `RenderSink` are renderer-neutral public base
 types; their concrete command/resource methods are finalized by the two
 remaining Gate 0 backend decisions without changing the facade above.
 
+ADR 0003 finalizes the image-resource side of that seam: the opt-in Raylib
+adapter decodes retained compressed PNG bytes headlessly, normalizes owned CPU
+images to straight RGBA8 top-to-bottom rows, validates dimensions, and uploads
+separate textures only after a context exists. `PreparedResources` owns both
+CPU images and textures and maps corrupt payloads to `assetDecode/imageDecode`.
+No decoder type or Naylib import enters the facade or core module graph.
+
 Shutdown order is mandatory:
 
 1. stop drawing and close every `PlayableScene`;

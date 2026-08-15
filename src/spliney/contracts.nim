@@ -109,7 +109,8 @@ type
 
   ResourceFactory* = ref object of RootObj
     ## Backend-defined resource acquisition seam. Concrete methods are frozen
-    ## by the decoder/backend ADR after the Gate 0 experiments.
+    ## by ADR 0003: adapters receive stable asset identity, immutable compressed
+    ## bytes owned by the file, and expected dimensions; backend types stay out.
 
   RenderSink* = ref object of RootObj
     ## Backend-neutral draw destination. Concrete command methods live in the
