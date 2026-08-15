@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "status": "gate-0-asset-audit-passed",
+  "asset": {
+    "filename": "g0bl1ntest.riv",
+    "sha256": "7a2f1d58da22e12932e73e76366b48651e66d9980153ece5433188c8fd08bc35",
+    "byteLength": 115468,
+    "riveMajor": 7,
+    "riveMinor": 3
+  },
+  "officialRuntime": {
+    "gitSha": "372b8092e940f32cf84499ae23a4899ec66a9ab1",
+    "siblingBaselineRepositorySha": "eebbd58568273c643e3d6dac025594e5b35a151b"
+  },
+  "probeSources": {
+    "tools/rive_wire_audit.nim": "5bfb5a6d87684190c476be95b8e4cc9f940cee8103bf315adca32df49feac7d6",
+    "tools/run_rive_wire_audit.sh": "3f2d374a95918ac04ad58c1b6dff2a4c16f667f7383eea77f278448b9189f5d3",
+    "tools/rive_oracle_probe/main.cpp": "a171bd5a70e2fcb0220d3345f74a790abc9fb03e034b7aecf1e3832eae94e673",
+    "tools/rive_oracle_probe/premake5.lua": "8c0e9f4e871b7c396904281e229a92a02b1a92b829c895bd71a6bce05a25389d",
+    "tools/run_rive_oracle_probe.sh": "94ab4e0e0ff02d758d5624feb790921b60653e62ce43bf59c8e948bdbf3908fb",
+    "tools/verify_goblin_gate0.nim": "d3916b10fda9d8b4a1fd71aa516a59a7fa219d9c129763ed25fd6643d69add19"
+  },
+  "privateEvidence": {
+    "wireAuditSha256": "e761c71cc00d3d249c2076aa229fa223c58cd2a22deff3bde888a8ee4e015ad5",
+    "oracleSha256": "c264ff0b761990f228535db4447a9e80fb1624288335d45b94b335e22d3addc9",
+    "committed": false,
+    "reproducibility": "two runs byte-for-byte identical"
+  },
+  "wireAudit": {
+    "objectCount": 525,
+    "tocPropertyCount": 35,
+    "encounteredPropertyKeyCount": 81,
+    "unknownTypeCount": 0,
+    "unknownPropertyCount": 0,
+    "typeCounts": {
+      "1": 1,
+      "2": 4,
+      "18": 1,
+      "20": 1,
+      "23": 1,
+      "25": 20,
+      "26": 51,
+      "30": 173,
+      "31": 3,
+      "40": 4,
+      "41": 2,
+      "43": 2,
+      "44": 6,
+      "45": 81,
+      "53": 1,
+      "57": 1,
+      "61": 5,
+      "62": 1,
+      "63": 1,
+      "64": 1,
+      "65": 3,
+      "81": 2,
+      "83": 1,
+      "100": 13,
+      "105": 13,
+      "106": 13,
+      "109": 3,
+      "111": 107,
+      "169": 1,
+      "420": 1,
+      "431": 1,
+      "435": 2,
+      "437": 2,
+      "442": 1,
+      "447": 1,
+      "515": 1
+    }
+  },
+  "oracleCoveragePerState": {
+    "boneAndRootBoneWorldMatrices": 6,
+    "ikConstraintOutputs": 2,
+    "transformConstraintOutputs": 1,
+    "skins": 2,
+    "tendons": 6,
+    "weights": 81,
+    "meshes": 3,
+    "deformedVertices": 107,
+    "meshIndices": 300,
+    "solidColors": 1,
+    "fills": 1,
+    "texturedMeshDraws": 3,
+    "absoluteTolerance": 0.0001,
+    "relativeTolerance": 0.00001
+  },
+  "embeddedImages": {
+    "count": 13,
+    "allDecoded": true,
+    "allEncodedHashesAndDecodedDimensionsRecordedInPrivateOracle": true
+  },
+  "animations": [
+    {
+      "name": "Timeline 1",
+      "targetSeconds": 2.0,
+      "animatedPropertyCount": 39,
+      "startSha256": "ac3e882aee9eb8a9ec1f8786a6084160fe1002ee935a9289211130048d6d8cef",
+      "boundedTargetSha256": "007a05c8ed7db3b9279446d39f8239d26cf8f765a1420e329d2f38d82dcba2aa",
+      "directTargetSha256": "f617ff1b0a89c16b09f3afb8c0e001d5158da7775b82c27d8faf66bc88e7f126",
+      "boundedChangedPixels": 22559,
+      "directChangedPixels": 22558,
+      "boundedVsDirectChangedPixels": 8
+    },
+    {
+      "name": "Timeline 2",
+      "targetSeconds": 0.266666681,
+      "animatedPropertyCount": 5,
+      "startSha256": "2a93230b50b4e3d5d8e9dcba95b6a175a9b080f0f59968eba4f93344c0936754",
+      "boundedTargetSha256": "03cfb658346e730e86fe882879bea68fdb2d567b2dd8ca630a112ce7e4e91140",
+      "directTargetSha256": "03cfb658346e730e86fe882879bea68fdb2d567b2dd8ca630a112ce7e4e91140",
+      "boundedChangedPixels": 3303,
+      "directChangedPixels": 3303,
+      "boundedVsDirectChangedPixels": 0
+    },
+    {
+      "name": "Timeline 3",
+      "targetSeconds": 0.266666681,
+      "animatedPropertyCount": 7,
+      "startSha256": "0c1f6c2d7dea8662738d2061074a043b70d08f84f88b6d292fa4391054b4026e",
+      "boundedTargetSha256": "fc3736cc59558a893ffcf1d79f99b29e009d839aeef484aa4220759e7e1af907",
+      "directTargetSha256": "fc3736cc59558a893ffcf1d79f99b29e009d839aeef484aa4220759e7e1af907",
+      "boundedChangedPixels": 3306,
+      "directChangedPixels": 3306,
+      "boundedVsDirectChangedPixels": 0
+    }
+  ],
+  "decisionsSupportedByEvidence": {
+    "layoutComponentStyle": "inert for default artboard bounds and visible output at the fixed official states",
+    "stateMachine": "retained as importable metadata; not required for linear playback",
+    "timeline1StepPolicy": "retain both direct authoritative and bounded-positive-step oracles; do not substitute one for the other"
+  }
+}
