@@ -79,6 +79,12 @@ readonly clean_naylib="$dependency_dir/naylib"
 readonly consumer_dir="$temporary_root/goblin-consumer"
 readonly clean_nimble_dir="$temporary_root/nimble-cache"
 mkdir -p "$dependency_dir" "$clean_nimble_dir"
+# Nimble 0.20.1 prompts to download its registry even with --offline when the
+# cache is completely absent. Seed an intentionally empty registry: this
+# package's only declared dependency is the system Nim compiler, while every
+# non-core dependency is supplied below by a pinned explicit source path.
+jq -n '[]' > "$clean_nimble_dir/packages_official.json"
+jq -n '[]' > "$clean_nimble_dir/packages_temp.json"
 git clone --quiet --no-local "$project_dir" "$checkout"
 git -C "$checkout" checkout --quiet --detach "$source_sha"
 cp -Rf "$naylib_dir" "$clean_naylib"
@@ -86,13 +92,16 @@ cp -Rf "$checkout/tests/consumer/goblin_demo" "$consumer_dir"
 
 copied_naylib_sha="$(cd "$clean_naylib" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256 | shasum -a 256 | awk '{print $1}')"
 [[ "$copied_naylib_sha" == "$expected_naylib_sha" ]]
-[[ -z "$(find "$clean_nimble_dir" -mindepth 1 -print -quit)" ]]
+[[ -z "$(find "$clean_nimble_dir" -mindepth 1 -maxdepth 1 -type d -print -quit)" ]]
 
 export NIMBLE_DIR="$clean_nimble_dir"
 (
   cd "$checkout"
   nimble --offline check
-  nimble --offline dump --json > "$output_dir/nimble-package.json"
+  nimble --offline dump --json 2> "$output_dir/logs/nimble-dump.log" |
+    sed -n '/^{/,$p' > "$output_dir/nimble-package.json"
+  jq -e '.name == "spliney" and .requires == [{"name":"nim","str":">= 2.0.0","ver":{"kind":"verEqLater","ver":"2.0.0"}}]' \
+    "$output_dir/nimble-package.json" >/dev/null
   nimble --offline test -y
 ) 2>&1 | tee "$output_dir/logs/core.log"
 
@@ -151,11 +160,12 @@ jq -n \
     schemaVersion: 1,
     testedSourceSha: $sourceSha,
     cleanCheckout: true,
-    cleanNimbleCacheAtStart: true,
+    cleanNimblePackageCacheAtStart: true,
     dependencyResolution: {
       nim: "system Nim 2.2.10",
       spliney: "explicit clean-checkout src path",
       naylib: "explicit copied source path",
+      offlineRegistrySeed: "empty",
       naylibAggregateSha256: $naylibSha,
       undeclaredNimblePackages: 0
     },
