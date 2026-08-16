@@ -110,3 +110,18 @@ The adapter is intentionally not exported by the core `spliney` barrel. A
 Naylib consumer opts in with `-d:useNaylib`, imports
 `spliney/backends/raylib/renderer`, initializes its Raylib window before
 preparing images, and closes prepared resources before closing the window.
+
+`run_exact_headless_gate.sh` is the fail-closed private-fixture headless gate.
+It verifies both private inputs by SHA-256, runs the public inventory,
+independent-scene, finite-playback, draw-stream, and transactional reselection
+checks, then compares every numeric and draw-list oracle field:
+
+```bash
+tools/run_exact_headless_gate.sh \
+  --asset /absolute/path/g0bl1ntest.riv \
+  --oracle build/private-evidence/goblin-oracle/first/oracle.json
+```
+
+The ordinary `nimble test` invocation runs the same integration executable
+without private inputs and prints a named skip. The readiness wrapper never
+allows a missing fixture or oracle to become a skip.

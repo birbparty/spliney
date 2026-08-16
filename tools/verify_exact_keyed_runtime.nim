@@ -9,6 +9,7 @@ import spliney/io/loader
 import spliney/math/geometry
 import spliney/render/protocol
 import spliney/scene/artboard
+import spliney/scene/dependency
 import spliney/scene/exact_runtime
 
 if paramCount() notin 1 .. 2:
@@ -234,4 +235,18 @@ if paramCount() == 2:
       remaining -= delta
       if remaining < 0.0000001'f32: remaining = 0
     cloned.value.verifyState(animationOracle["states"][1])
+
+  var replacement = artboards.value[0].cloneArtboard(0).value
+  doAssert replacement.initialSettle().isOk
+  for cycle in 0 ..< 30:
+    doAssert replacement.poisonAnimatedValues(-999'f32 - cycle.float32).isOk
+    replacement.exact.syncAnimated(replacement.registry)
+    doAssert replacement.exact.settle().isOk
+    doAssert replacement.solver.updateComponents().isOk
+    let previous = replacement
+    let selected = cycle mod oracle["animations"].len
+    doAssert replacement.replaceAnimation(selected).isOk
+    doAssert replacement != previous
+    replacement.verifyState(oracle["animations"][selected]["states"][0])
+  echo "30 poisoned modulo-three replacements matched official start states"
   echo "official numeric and draw-command oracle verified at start and bounded target states"

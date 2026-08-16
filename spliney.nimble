@@ -28,5 +28,6 @@ task test, "Run the spliney test suite":
   exec "nim c -r --hints:off --mm:orc --outdir:build tests/scene/test_dependency.nim"
   exec "nim c -r --hints:off --mm:orc --outdir:build tests/scene/test_artboard.nim"
   exec "nim c -r --hints:off --mm:orc --outdir:build tests/scene/test_exact_runtime.nim"
+  exec "nim c -r --hints:off --mm:orc --outdir:build tests/integration/test_goblin_headless.nim"
   # --outdir:build keeps compiled test binaries out of the source tree (build/ is gitignored).
   exec "nim c -r --hints:off --mm:orc --outdir:build tests/test_smoke.nim"
