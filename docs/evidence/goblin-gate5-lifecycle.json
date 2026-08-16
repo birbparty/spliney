@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-08-15",
+  "baseCommit": "f332f9d69c1a292075d64443b909d82bd47d3da6",
+  "status": "gate-5-lifecycle-stress-passed",
+  "asset": {
+    "label": "g0bl1ntest.riv",
+    "sha256": "7a2f1d58da22e12932e73e76366b48651e66d9980153ece5433188c8fd08bc35",
+    "byteLength": 115468,
+    "redistributed": false
+  },
+  "environment": {
+    "os": "macOS 26.5.2 (25F84)",
+    "architecture": "arm64",
+    "gpu": "Apple M4 Max",
+    "nim": "2.2.10",
+    "memoryManager": "orc",
+    "naylibVersion": "26.08.0",
+    "naylibRevision": "19dd4e7e34c705c677e89b3a6516846c9f2e0125",
+    "raylibSourceVersion": "5.6-dev"
+  },
+  "failureMatrix": {
+    "repetitionsPerPoint": 50,
+    "malformedInputs": 50,
+    "versionMismatches": 50,
+    "decodePoints": 13,
+    "totalDecodeFailures": 650,
+    "uploadPoints": 13,
+    "totalUploadFailures": 650,
+    "sceneConstructionPoints": ["clone", "startApply", "settle"],
+    "totalSceneConstructionFailures": 150,
+    "contextInitializationFailures": 50,
+    "drawSubmissionFailures": 50,
+    "captureReadbackFailures": 50,
+    "captureWriteFailures": 50,
+    "partialConstructionRollbackExact": true,
+    "failedSceneMatchesUntouchedControl": true,
+    "recoveryDrawAfterCaptureFailures": true
+  },
+  "stressProfile": {
+    "moduloThreeSelectionCycles": 300,
+    "boundedHeadlessAdvances": 10000,
+    "realRaylibFrames": 600,
+    "maximumAdvanceSeconds": 0.1,
+    "headlessAcquireCount": 13,
+    "headlessReleaseCount": 13,
+    "gpuDecodeCount": 13,
+    "gpuUploadCount": 13,
+    "gpuReleaseCount": 13,
+    "resourceBaselineCheckedAfterEverySelection": true,
+    "gpuBaselineCheckedEveryFrames": 60,
+    "upwardTrendAfterWarmup": false,
+    "allCountersReturnedExactlyToBaseline": true
+  },
+  "shutdown": {
+    "renderTargetDisposedBeforeImages": true,
+    "imagesDisposedBeforeWindow": true,
+    "explicitSceneResourceAndFileCloseIdempotent": true,
+    "normalPostWindowMilliseconds": 11,
+    "instrumentedPostWindowMilliseconds": 16,
+    "entireNormalProcessUnderFiveSeconds": true,
+    "watchdogSecondsPerRun": 120
+  },
+  "nativeLeaks": {
+    "tool": "/usr/bin/leaks --atExit",
+    "rawDetectedNodes": 288,
+    "rawDetectedBytes": 18816,
+    "excludedOsRootSymbol": "-[LNProcessInstanceRegistryClient makeXPCConnection]",
+    "excludedReason": "macOS AppIntents NSXPCConnection root cycle",
+    "excludedNodes": 288,
+    "remainingPrintedLeakStacks": 0,
+    "splineyAttributableDefinitelyLostAllocations": 0,
+    "reportRetainedPrivately": true
+  },
+  "privateEvidence": {
+    "metricsSha256": "4710c81c186c555bec632d84227423dcf2c8c05031c10224b0c6a44dfdc557fa",
+    "leaksReportSha256": "db1b49f6b03ebef3f067f940cab97967f99c1b43e3dc28974a11d243ef4c1635",
+    "normalAndInstrumentedMetricsByteIdentical": true,
+    "committed": false
+  },
+  "commands": [
+    "tools/run_exact_lifecycle.sh --asset <exact.riv> --output-dir build/private-evidence/exact-lifecycle",
+    "nimble test -y"
+  ],
+  "sourceSha256": {
+    "lifecycleHarness": "b86167ae78227ed27ac9a3a1823d8041ebbcf5e6f97f04364804d3957438ece2",
+    "lifecycleWrapper": "81f10e11cd095f3a78dbb6aaff88ee9ea09a1721413d23cc6a85bb5d9a5397bc"
+  }
+}

@@ -125,3 +125,19 @@ tools/run_exact_headless_gate.sh \
 The ordinary `nimble test` invocation runs the same integration executable
 without private inputs and prints a named skip. The readiness wrapper never
 allows a missing fixture or oracle to become a skip.
+
+`run_exact_lifecycle.sh` runs the fixed Gate 5 failure and stress matrix using
+the real private asset and macOS graphics context. It builds with ORC and the
+pinned Naylib revision, applies a 120-second watchdog to both runs, and retains
+the deterministic metrics plus Apple `leaks --atExit` output:
+
+```bash
+tools/run_exact_lifecycle.sh \
+  --asset /absolute/path/g0bl1ntest.riv \
+  --output-dir build/private-evidence/exact-lifecycle
+```
+
+The leaks invocation excludes only the macOS AppIntents
+`-[LNProcessInstanceRegistryClient makeXPCConnection]` root cycle. The wrapper
+fails if any non-excluded stack remains, if the instrumented workload does not
+finish, or if its metrics differ from the normal run.
