@@ -5,6 +5,7 @@ author        = "Matt Spurlin"
 description   = "A from-scratch Rive animation runtime in Nim (renderer-agnostic core + pluggable 2D backends)"
 license       = "MIT"
 srcDir        = "src"
+backend       = "c"
 
 # Dependencies
 
