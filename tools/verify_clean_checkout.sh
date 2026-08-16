@@ -91,9 +91,9 @@ copied_naylib_sha="$(cd "$clean_naylib" && find . -type f -print0 | LC_ALL=C sor
 export NIMBLE_DIR="$clean_nimble_dir"
 (
   cd "$checkout"
-  nimble check
-  nimble dump --json > "$output_dir/nimble-package.json"
-  nimble test -y
+  nimble --offline check
+  nimble --offline dump --json > "$output_dir/nimble-package.json"
+  nimble --offline test -y
 ) 2>&1 | tee "$output_dir/logs/core.log"
 
 nim c --hints:off --mm:orc --noNimblePath \
@@ -120,11 +120,11 @@ nim c --hints:off --mm:orc --noNimblePath \
 
 (
   cd "$consumer_dir"
-  nimble check
+  nimble --offline check
   nim c --hints:off -d:release --mm:orc --noNimblePath -d:useNaylib \
     --path:"$checkout/src" --path:"$clean_naylib" \
-    --out:"$temporary_root/goblin-consumer" src/goblin_demo.nim
-  caffeinate -u "$temporary_root/goblin-consumer" "$asset"
+    --out:"$temporary_root/goblin-consumer-bin" src/goblin_demo.nim
+  caffeinate -u "$temporary_root/goblin-consumer-bin" "$asset"
 ) 2>&1 | tee "$output_dir/logs/consumer.log"
 
 [[ -z "$(git -C "$checkout" status --porcelain=v1)" ]]
