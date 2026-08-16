@@ -31,9 +31,9 @@ done
 mkdir -p "$project_dir/build/tools"
 readonly public_binary="$project_dir/build/tools/test_goblin_headless"
 readonly oracle_binary="$project_dir/build/tools/verify_exact_keyed_runtime"
-nim c --hints:off --mm:orc --out:"$public_binary" \
+nim c --hints:off --mm:orc --noNimblePath --out:"$public_binary" \
   "$project_dir/tests/integration/test_goblin_headless.nim"
-nim c --hints:off --mm:orc --out:"$oracle_binary" \
+nim c --hints:off --mm:orc --noNimblePath --out:"$oracle_binary" \
   "$project_dir/tools/verify_exact_keyed_runtime.nim"
 "$public_binary" --asset:"$asset" --require-private-fixture
 "$oracle_binary" "$asset" "$oracle"

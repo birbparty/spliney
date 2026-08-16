@@ -53,6 +53,10 @@ must be closed before the window. All close operations are idempotent. See
 commands and [ADR 0001](docs/adr/0001-public-api-and-lifetimes.md) for the full
 ownership/error contract.
 
+The complete initialization, per-frame, animation-selection, error, and
+shutdown recipe is in
+[the macOS consumer contract](docs/macos-goblin-consumer.md).
+
 The exact macOS adapter is opt-in: add `-d:useNaylib`, provide the pinned Naylib
 source with an explicit compiler path, and import
 `spliney/backends/raylib/renderer`. Naylib is deliberately not a transitive

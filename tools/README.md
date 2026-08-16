@@ -67,7 +67,8 @@ ADR 0002 metrics, and byte-compares two finite runs:
 tools/run_raylib_render_spike.sh \
   --oracle build/private-evidence/goblin-oracle/first/oracle.json \
   --reference-dir build/private-evidence/goblin-oracle/first/reference \
-  --output-dir build/private-evidence/raylib-render-spike
+  --output-dir build/private-evidence/raylib-render-spike \
+  --naylib-dir /absolute/path/naylib-26.08.0-19dd4e7e
 ```
 
 `run_raylib_png_decode_probe.sh` proves ADR 0003's split resource stages. It
@@ -79,7 +80,8 @@ then verifies that the retained CPU images upload after context creation:
 tools/run_raylib_png_decode_probe.sh \
   --oracle build/private-evidence/goblin-oracle/first/oracle.json \
   --reference-dir build/private-evidence/goblin-oracle/first/reference \
-  --output-dir build/private-evidence/raylib-png-decode
+  --output-dir build/private-evidence/raylib-png-decode \
+  --naylib-dir /absolute/path/naylib-26.08.0-19dd4e7e
 ```
 
 After both probes, enforce the complete Gate 0 evidence floor with:
@@ -103,7 +105,8 @@ tools/run_exact_raylib_capture.sh \
   --asset /absolute/path/g0bl1ntest.riv \
   --oracle build/private-evidence/goblin-oracle/first/oracle.json \
   --reference-dir build/private-evidence/goblin-oracle/first/reference \
-  --output-dir build/private-evidence/exact-raylib-capture
+  --output-dir build/private-evidence/exact-raylib-capture \
+  --naylib-dir /absolute/path/naylib-26.08.0-19dd4e7e
 ```
 
 The adapter is intentionally not exported by the core `spliney` barrel. A
@@ -134,10 +137,32 @@ the deterministic metrics plus Apple `leaks --atExit` output:
 ```bash
 tools/run_exact_lifecycle.sh \
   --asset /absolute/path/g0bl1ntest.riv \
-  --output-dir build/private-evidence/exact-lifecycle
+  --output-dir build/private-evidence/exact-lifecycle \
+  --naylib-dir /absolute/path/naylib-26.08.0-19dd4e7e
 ```
 
 The leaks invocation excludes only the macOS AppIntents
 `-[LNProcessInstanceRegistryClient makeXPCConnection]` root cycle. The wrapper
 fails if any non-excluded stack remains, if the instrumented workload does not
 finish, or if its metrics differ from the normal run.
+
+All Naylib-using commands require an explicit source directory and validate its
+complete 164-file aggregate SHA-256. They compile with `--noNimblePath`; a
+package in the caller's global Nimble cache cannot satisfy the adapter import.
+
+`verify_clean_checkout.sh` is the complete readiness reproduction. It clones
+the current clean commit into a temporary detached checkout, copies the pinned
+Naylib source, starts with an empty `NIMBLE_DIR`, runs the core, Gate 0,
+headless, capture, and lifecycle gates, then copies and runs the independent
+public-only consumer package outside the Spliney checkout:
+
+```bash
+tools/verify_clean_checkout.sh \
+  --asset /absolute/path/g0bl1ntest.riv \
+  --wire-audit /absolute/path/goblin-wire-audit.json \
+  --oracle /absolute/path/oracle.json \
+  --reference-dir /absolute/path/reference \
+  --baseline /absolute/path/spliney-goblin-demo/docs/asset-manifest.json \
+  --naylib-dir /absolute/path/naylib-26.08.0-19dd4e7e \
+  --output-dir build/private-evidence/clean-checkout
+```

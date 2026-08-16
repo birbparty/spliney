@@ -2,25 +2,28 @@
 set -euo pipefail
 
 readonly project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-readonly expected_naylib_dir="naylib-26.08.0-19dd4e7e34c705c677e89b3a6516846c9f2e0125"
+readonly expected_naylib_sha="a705b3fc7987785b6609780a0237e92f380705a357faee8a30af8b26275dc1ae"
 readonly expected_asset_sha="7a2f1d58da22e12932e73e76366b48651e66d9980153ece5433188c8fd08bc35"
 
 asset=""
 output_dir=""
+naylib_dir=""
 while (($#)); do
   case "$1" in
     --asset) asset="$2"; shift 2 ;;
     --output-dir) output_dir="$2"; shift 2 ;;
+    --naylib-dir) naylib_dir="$2"; shift 2 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
 
-[[ -f "$asset" && -n "$output_dir" ]] || {
-  echo "usage: run_exact_lifecycle.sh --asset FILE --output-dir DIR" >&2
+[[ -f "$asset" && -n "$output_dir" && -d "$naylib_dir" ]] || {
+  echo "usage: run_exact_lifecycle.sh --asset FILE --output-dir DIR --naylib-dir DIR" >&2
   exit 2
 }
-[[ "$(basename "$(nimble path naylib)")" == "$expected_naylib_dir" ]] || {
-  echo "naylib revision mismatch" >&2
+actual_naylib_sha="$(cd "$naylib_dir" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256 | shasum -a 256 | awk '{print $1}')"
+[[ "$actual_naylib_sha" == "$expected_naylib_sha" ]] || {
+  echo "naylib source hash mismatch" >&2
   exit 1
 }
 [[ "$(shasum -a 256 "$asset" | awk '{print $1}')" == "$expected_asset_sha" ]] || {
@@ -31,7 +34,8 @@ done
 rm -rf "$output_dir/normal" "$output_dir/leaks-run"
 mkdir -p "$project_dir/build/tools" "$output_dir/normal" "$output_dir/leaks-run"
 readonly binary="$project_dir/build/tools/verify_exact_lifecycle"
-nim c --hints:off -d:release --mm:orc -d:useNaylib --out:"$binary" \
+nim c --hints:off -d:release --mm:orc --noNimblePath -d:useNaylib \
+  --path:"$naylib_dir" --out:"$binary" \
   "$project_dir/tools/verify_exact_lifecycle.nim"
 
 normal_started=$SECONDS
