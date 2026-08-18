@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-08-15",
+  "baseCommit": "e0ce24bf75c43915205337c8ea466a54c30ad345",
+  "officialRuntimeSha": "372b8092e940f32cf84499ae23a4899ec66a9ab1",
+  "assetSha256": "7a2f1d58da22e12932e73e76366b48651e66d9980153ece5433188c8fd08bc35",
+  "privateOracleSha256": {
+    "first": "778a46c266d66dcc16c484cd6931505059d86ba7ed9f9e43f540c869a8a7406c",
+    "second": "778a46c266d66dcc16c484cd6931505059d86ba7ed9f9e43f540c869a8a7406c"
+  },
+  "statesVerifiedPerAnimation": [
+    "authored-start",
+    "bounded-positive-target"
+  ],
+  "drawInventory": {
+    "solidFillPerState": 1,
+    "solidFillColorArgb": "0xff282828",
+    "solidFillRule": 2,
+    "texturedMeshesPerState": 3,
+    "meshVerticesPerState": 107,
+    "meshUvsPerState": 107,
+    "meshIndicesPerState": 300,
+    "embeddedImagesPrepared": 13,
+    "timeline1CommandsPerState": 12,
+    "timeline2CommandsPerState": 13,
+    "timeline3CommandsPerState": 12
+  },
+  "comparison": {
+    "commandKindAndOrder": "pass",
+    "imageIdentity": "pass",
+    "transform": "pass",
+    "opacity": "pass",
+    "sampler": "pass",
+    "blendMode": "pass",
+    "vertices": "pass",
+    "uvs": "pass",
+    "indices": "pass",
+    "absoluteTolerance": 0.0001,
+    "relativeTolerance": 0.00001,
+    "recordingStackBalanced": true,
+    "twoOracleRunsIdentical": true
+  },
+  "allocationAndOwnership": {
+    "immutableUvAndIndexBuffersCreatedOncePerSceneMesh": true,
+    "mutableVertexBuffersReusedAcrossDraws": true,
+    "preparedImagesSharedAcrossSceneReplacement": true,
+    "canonicalRecordingUsesSemanticPathData": true
+  },
+  "commands": [
+    "nimble test -y",
+    "nim c -r --hints:off --mm:orc --outdir:build tools/verify_exact_keyed_runtime.nim <exact.riv> <official-oracle-first.json>",
+    "build/verify_exact_keyed_runtime <exact.riv> <official-oracle-second.json>",
+    "nim c -r --hints:off --mm:orc --outdir:build tools/verify_exact_public_playback.nim <exact.riv>",
+    "core renderer-dependency purity scan"
+  ],
+  "sourceSha256": {
+    "exactRuntime": "e74ae7c127f53a92fbab7149d70bc68f4c29926ac938fa878bc2d494e412a6e2",
+    "publicContract": "7d2dd03c64d9fa5328b2506c94932cc931d5bd2e8a4d49f2bc207fdf56bb4e01",
+    "recordingBackend": "389267f87cdaebe0c58ed7664efd0d20440c1505396e72e977d1579d588af483",
+    "unitTests": "bbcb1305225d66616e97715e5cd17050c391292f148196e173085e3e320d8d47",
+    "oracleVerifier": "b103f7301f897a6a9fd7b8e75ba0b28541567663f6a911b5e344dc78a2bfca71",
+    "publicVerifier": "fcd7b8a0aa576e8478a487d7fd9505f1eb793bce41d8d735b45f8f0af308541e"
+  }
+}

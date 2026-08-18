@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-08-15",
+  "baseCommit": "5fed0de36571f3a108ab9fd450942dc979601f4c",
+  "officialRuntimeSha": "372b8092e940f32cf84499ae23a4899ec66a9ab1",
+  "asset": {
+    "label": "g0bl1ntest.riv",
+    "sha256": "7a2f1d58da22e12932e73e76366b48651e66d9980153ece5433188c8fd08bc35",
+    "redistributed": false
+  },
+  "environment": {
+    "os": "macOS",
+    "architecture": "arm64",
+    "nim": "2.2.10",
+    "memoryManager": "orc"
+  },
+  "inventory": {
+    "artboards": 1,
+    "artboardName": "Artboard",
+    "width": 500,
+    "height": 500,
+    "componentObjectIds": 229,
+    "linearAnimations": 3,
+    "keyedObjects": 20,
+    "keyedProperties": 51,
+    "keyFrameDoubles": 173
+  },
+  "animations": [
+    {"name": "Timeline 1", "fps": 24, "durationFrames": 192, "speed": 2, "loopValue": 1},
+    {"name": "Timeline 2", "fps": 60, "durationFrames": 32, "speed": 1, "loopValue": 1},
+    {"name": "Timeline 3", "fps": 60, "durationFrames": 32, "speed": 1, "loopValue": 1}
+  ],
+  "officialAnimatedPropertyOracle": {
+    "firstSha256": "778a46c266d66dcc16c484cd6931505059d86ba7ed9f9e43f540c869a8a7406c",
+    "secondSha256": "778a46c266d66dcc16c484cd6931505059d86ba7ed9f9e43f540c869a8a7406c",
+    "absoluteTolerance": 0.0001,
+    "relativeTolerance": 0.00001,
+    "statesVerifiedPerAnimation": ["authored-start", "bounded-positive-target"],
+    "result": "all animated properties matched in both oracle runs"
+  },
+  "transactionalReplacement": {
+    "faults": ["clone", "startApply", "settle"],
+    "oldSceneIdentityPreserved": true,
+    "poisonedOldSceneContinuedInLockstepWithControl": true
+  },
+  "publicContract": {
+    "threeIndependentScenes": true,
+    "invalidReplacementLeavesSceneUsable": true,
+    "liveScenePreventsFileClose": true,
+    "idempotentClose": true
+  },
+  "commands": [
+    "nimble test -y",
+    "nim c -r --hints:off --mm:orc --outdir:build tools/verify_exact_keyed_runtime.nim <exact.riv> <official-oracle.json>",
+    "nim c -r --hints:off --mm:orc --outdir:build tools/verify_exact_public_playback.nim <exact.riv>"
+  ],
+  "sourceSha256": {
+    "artboardRuntime": "cad1bdd2269ebb7cad5f610b91378a78c1367fff3ad86cfbb374caed7c6608c9",
+    "publicContract": "d1f6e547cf0d043c1703dd9ebf5a6fa2e5bc9150a5de5711441f4b8c5945522e",
+    "keyedRuntime": "7b0ebb9fed413c5e4893f329df7a7ad9cc772f2dcff45f15ebe3d9c6cbc699a5",
+    "artboardTests": "bd4a5becf65dd51cfce1d8e147b56512f0a626e58e8fb8920be631cafac7a35d",
+    "oracleVerifier": "69458e9a862cd43696b11676cd165ba53823b8ae138e8bd90f04941b1e02071e",
+    "publicVerifier": "5b43fc8baef937040ac97ce030cfee421d294e26db1d70f2d943119b308bfa07"
+  }
+}

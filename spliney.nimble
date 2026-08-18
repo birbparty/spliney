@@ -5,6 +5,7 @@ author        = "Matt Spurlin"
 description   = "A from-scratch Rive animation runtime in Nim (renderer-agnostic core + pluggable 2D backends)"
 license       = "MIT"
 srcDir        = "src"
+backend       = "c"
 
 # Dependencies
 
@@ -14,5 +15,21 @@ requires "nim >= 2.0.0"
 
 # Run the test suite. `nimble test` -> `make test` -> ralph's VERIFY step all route here.
 task test, "Run the spliney test suite":
+  # A dependency-free core compile cannot accidentally resolve Naylib/Raylib.
+  exec "nim check --hints:off --mm:orc --noNimblePath tests/contracts/public_consumer.nim"
+  exec "nim c -r --hints:off --mm:orc --outdir:build tests/generated/test_wire_registry.nim"
+  exec "nim c -r --hints:off --mm:orc --outdir:build tests/io/test_loader.nim"
+  exec "nim c -r --hints:off --mm:orc --outdir:build tests/math/test_geometry.nim"
+  exec "nim c -r --hints:off --mm:orc --outdir:build tests/render/test_protocol.nim"
+  exec "nim c -r --hints:off --mm:orc --outdir:build tests/backends/noop/test_recording.nim"
+  exec "nim c -r --hints:off --mm:orc --outdir:build tests/animation/test_easing.nim"
+  exec "nim c -r --hints:off --mm:orc --outdir:build tests/animation/test_keyed_runtime.nim"
+  exec "nim c -r --hints:off --mm:orc --outdir:build tests/animation/test_linear_engine.nim"
+  exec "nim c -r --hints:off --mm:orc --outdir:build tests/core/transform/test_node.nim"
+  exec "nim c -r --hints:off --mm:orc --outdir:build tests/scene/test_dependency.nim"
+  exec "nim c -r --hints:off --mm:orc --outdir:build tests/scene/test_artboard.nim"
+  exec "nim c -r --hints:off --mm:orc --outdir:build tests/scene/test_exact_runtime.nim"
+  exec "nim c -r --hints:off --mm:orc --outdir:build tests/integration/test_goblin_headless.nim"
+  exec "nim c -r --hints:off --mm:orc --outdir:build tests/purity/test_core_imports.nim"
   # --outdir:build keeps compiled test binaries out of the source tree (build/ is gitignored).
   exec "nim c -r --hints:off --mm:orc --outdir:build tests/test_smoke.nim"
