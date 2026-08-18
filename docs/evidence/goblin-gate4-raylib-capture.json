@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-08-15",
+  "baseCommit": "3b41e3bbac8710f62a1aa3bed50b2eb063dfcb4c",
+  "status": "gate-4-macos-raylib-capture-passed",
+  "asset": {
+    "label": "g0bl1ntest.riv",
+    "sha256": "7a2f1d58da22e12932e73e76366b48651e66d9980153ece5433188c8fd08bc35",
+    "byteLength": 115468,
+    "redistributed": false
+  },
+  "officialRuntime": {
+    "gitSha": "372b8092e940f32cf84499ae23a4899ec66a9ab1",
+    "oracleSha256": "778a46c266d66dcc16c484cd6931505059d86ba7ed9f9e43f540c869a8a7406c"
+  },
+  "environment": {
+    "os": "macOS 26.5.2 (25F84)",
+    "architecture": "arm64",
+    "gpu": "Apple M4 Max",
+    "opengl": "4.1 Metal - 90.5",
+    "nim": "2.2.10",
+    "nimble": "0.22.2",
+    "appleClang": "17.0.0 (clang-1700.6.3.2)",
+    "memoryManager": "orc",
+    "naylibVersion": "26.08.0",
+    "naylibRevision": "19dd4e7e34c705c677e89b3a6516846c9f2e0125",
+    "raylibSourceVersion": "5.6-dev",
+    "compileDefinition": "useNaylib"
+  },
+  "capturePolicy": {
+    "canvas": [960, 540],
+    "backgroundRgba": [245, 247, 250, 255],
+    "artboard": [500, 500],
+    "fit": "centered-contain",
+    "roiInclusive": [210, 0, 749, 539],
+    "alpha": "straight-alpha texture input and separate source-over blending",
+    "maximumAdvanceSeconds": 0.1,
+    "repeatRunsByteIdentical": true,
+    "thresholdException": null
+  },
+  "animations": [
+    {
+      "name": "Timeline 1",
+      "targetSeconds": 2.0,
+      "startReferenceSha256": "ac3e882aee9eb8a9ec1f8786a6084160fe1002ee935a9289211130048d6d8cef",
+      "targetReferenceSha256": "f617ff1b0a89c16b09f3afb8c0e001d5158da7775b82c27d8faf66bc88e7f126",
+      "startCaptureSha256": "2e5dcbdb02157a488d2c3bd71fc7e324007e84a5344e4b8cd652867b92c0aba6",
+      "targetCaptureSha256": "a719d56f77fa7af5c032ec47baf0f18f2cc82ae7e309dd1632e015d61a574431",
+      "startMeanAbsoluteRgba": 0.30667609739369,
+      "targetMeanAbsoluteRgba": 0.3145636145404664,
+      "startPixelsOver16": 1814,
+      "targetPixelsOver16": 1841,
+      "actualChangedPixels": 22478,
+      "referenceChangedPixels": 22558,
+      "outsideRoiErrors": 0,
+      "result": "pass"
+    },
+    {
+      "name": "Timeline 2",
+      "targetSeconds": 0.266666681,
+      "startReferenceSha256": "2a93230b50b4e3d5d8e9dcba95b6a175a9b080f0f59968eba4f93344c0936754",
+      "targetReferenceSha256": "03cfb658346e730e86fe882879bea68fdb2d567b2dd8ca630a112ce7e4e91140",
+      "startCaptureSha256": "ed082864e5b5da26b2bc6e384543d884e829845a0e10f4e0a719f085ce027d8f",
+      "targetCaptureSha256": "6b98e95b573d935b96b35aa9802a9531f9d01f0ae4860b7a0c5041b43dff16bf",
+      "startMeanAbsoluteRgba": 0.2813485939643347,
+      "targetMeanAbsoluteRgba": 0.2821407750342936,
+      "startPixelsOver16": 1450,
+      "targetPixelsOver16": 1458,
+      "actualChangedPixels": 3325,
+      "referenceChangedPixels": 3303,
+      "outsideRoiErrors": 0,
+      "result": "pass"
+    },
+    {
+      "name": "Timeline 3",
+      "targetSeconds": 0.266666681,
+      "startReferenceSha256": "0c1f6c2d7dea8662738d2061074a043b70d08f84f88b6d292fa4391054b4026e",
+      "targetReferenceSha256": "fc3736cc59558a893ffcf1d79f99b29e009d839aeef484aa4220759e7e1af907",
+      "startCaptureSha256": "bc1f4f3f602c909692d24744c6447345d8e0891c65923978cc529b91d0002b8b",
+      "targetCaptureSha256": "9714da0e0174a59a48311fbe491da72d4530b0ab52a284d9ff070afbfebc4fab",
+      "startMeanAbsoluteRgba": 0.29734567901234565,
+      "targetMeanAbsoluteRgba": 0.29813786008230453,
+      "startPixelsOver16": 1713,
+      "targetPixelsOver16": 1721,
+      "actualChangedPixels": 3327,
+      "referenceChangedPixels": 3306,
+      "outsideRoiErrors": 0,
+      "result": "pass"
+    }
+  ],
+  "translation": {
+    "paddedCanvas": [1160, 540],
+    "delta": [100, 0],
+    "baseCaptureSha256": "6847e5f1a01c1982dfb26c9742c98c0ff152949026ddb35224c3e2ca67b810cb",
+    "shiftedCaptureSha256": "34b5db0c04484075db8f37c20de7bcb79577764097595b623cffed5404958b04",
+    "fullForegroundMaskExact": true,
+    "vacatedAndOutsidePixelsBackground": true,
+    "allProjectedPathAndMeshVerticesExact": true
+  },
+  "resources": {
+    "embeddedImageDecodeCount": 13,
+    "textureUploadCount": 13,
+    "textureReleaseCount": 13,
+    "renderTargetsReleasedBeforeImages": true,
+    "imagesReleasedBeforeWindowClose": true,
+    "processExited": true
+  },
+  "privateEvidence": {
+    "captureMetricsSha256": "55be06f09fe52dccbf3851edfec07199b896974ba1e2f9669aa7d86aaa1451e2",
+    "committed": false
+  },
+  "commands": [
+    "tools/run_exact_raylib_capture.sh --asset <exact.riv> --oracle <official-oracle.json> --reference-dir <official-reference-dir> --output-dir build/private-evidence/exact-raylib-capture",
+    "nim c -r --hints:off --mm:orc --outdir:build tools/verify_exact_public_playback.nim <exact.riv>"
+  ],
+  "sourceSha256": {
+    "renderProtocol": "b2cb5e86b90d86392135ea47af6cd9f81a1d9bd76f5d04095588c00db2407493",
+    "publicContract": "bd27e6cf5d187e0dd4ce1825613f887947759fc4aa854b88a91d159f0a79b141",
+    "recordingBackend": "8ec96a8f23a39e1d0b8b5ae9af58bb4fb58e44acba5e2a10aeb93fa1d87fee5a",
+    "raylibImageAdapter": "66bb04ebe00dbe572b242ca82267aec3a92c424203aea8392e9da0cc83e253aa",
+    "raylibRenderer": "5b62a83eed7f2b23d621c291711d543e48d64420c94c032016ad20bcd8287b69",
+    "captureHarness": "8f5310e64e7966e32ea090e1533daadf03ce8fc2a09f798bf6855ae6244f20c4",
+    "captureWrapper": "0d418f9838b21772966d2fada9853fd0901e220f93ff4e4bcaaa783d35057380",
+    "publicVerifier": "bc384544e1376c1089332d12c2a35eaf94be0314bcb9a57760a77b3f5cb92934",
+    "recordingTests": "8b8ab09bb003deedb0bcf0a13a2b3941385ca2aca0387f2fb061515eb65ff8af"
+  }
+}

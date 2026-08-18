@@ -1,0 +1,390 @@
+{
+  "schemaVersion": 1,
+  "status": "macos-goblin-demo-ready",
+  "recordedAt": "2026-08-15",
+  "testedSource": {
+    "gitSha": "08c9abf6318291ca720895891235780b9153311f",
+    "checkoutMode": "detached clone created with git clone --no-local",
+    "cleanBeforeRun": true,
+    "cleanAfterRun": true
+  },
+  "evidenceCarrier": {
+    "parentGitSha": "08c9abf6318291ca720895891235780b9153311f",
+    "expectedOnlyChanges": [
+      "docs/evidence/goblin-readiness.json",
+      "docs/goblin-readiness.md"
+    ],
+    "selfReferentialCommitShaOmitted": true
+  },
+  "inputs": {
+    "asset": {
+      "label": "g0bl1ntest.riv",
+      "sha256": "7a2f1d58da22e12932e73e76366b48651e66d9980153ece5433188c8fd08bc35",
+      "byteLength": 115468,
+      "riveVersion": "7.3",
+      "redistributed": false
+    },
+    "officialRuntime": {
+      "gitSha": "372b8092e940f32cf84499ae23a4899ec66a9ab1",
+      "oracleSha256": "778a46c266d66dcc16c484cd6931505059d86ba7ed9f9e43f540c869a8a7406c",
+      "repeatRunsByteIdentical": true,
+      "shippedDependency": false
+    },
+    "wireAuditSha256": "e761c71cc00d3d249c2076aa229fa223c58cd2a22deff3bde888a8ee4e015ad5",
+    "siblingDemo": {
+      "gitSha": "eebbd58568273c643e3d6dac025594e5b35a151b",
+      "assetManifestSha256": "edef4ebcefb83b82cb52bef9d4dcf8996b9fc64237f92f48ace1f2b2c92153d6"
+    }
+  },
+  "environment": {
+    "os": "macOS 26.5.2 (25F84)",
+    "architecture": "arm64",
+    "gpu": "Apple M4 Max",
+    "opengl": "4.1 Metal - 90.5",
+    "nim": "2.2.10",
+    "nimble": "0.22.2",
+    "appleClang": "17.0.0 (clang-1700.6.3.2)",
+    "memoryManager": "orc"
+  },
+  "dependencyResolution": {
+    "declaredPackageRequirements": [
+      "nim >= 2.0.0"
+    ],
+    "spliney": "tested detached checkout supplied by explicit src path",
+    "naylib": {
+      "version": "26.08.0",
+      "revision": "19dd4e7e34c705c677e89b3a6516846c9f2e0125",
+      "fileCount": 164,
+      "aggregateSha256": "a705b3fc7987785b6609780a0237e92f380705a357faee8a30af8b26275dc1ae",
+      "resolution": "copied pinned source supplied by explicit path"
+    },
+    "raylib": "Naylib-bundled 5.6-dev native source",
+    "cleanNimblePackageCacheAtStart": true,
+    "offlineRegistrySeed": "two empty JSON arrays",
+    "undeclaredNimblePackagesResolved": 0,
+    "globalNimblePathDisabledForAllAdapterBuilds": true
+  },
+  "build": {
+    "backend": "C",
+    "definitions": [
+      "useNaylib",
+      "release for adapter and external-consumer builds"
+    ],
+    "compilerFlags": [
+      "--mm:orc",
+      "--noNimblePath",
+      "--path:<clean-checkout>/src",
+      "--path:<copied-naylib>"
+    ],
+    "nativeLinkInputs": [
+      "OpenGL.framework",
+      "Cocoa.framework",
+      "IOKit.framework",
+      "CoreAudio.framework",
+      "CoreVideo.framework"
+    ]
+  },
+  "commands": [
+    {
+      "name": "clean-checkout-readiness",
+      "command": "./tools/verify_clean_checkout.sh --asset /Users/punk1290/Downloads/g0bl1ntest.riv --wire-audit build/private-evidence/goblin-wire-audit.json --oracle build/private-evidence/goblin-oracle/first/oracle.json --reference-dir build/private-evidence/goblin-oracle/first/reference --baseline /Users/punk1290/git/spliney-goblin-demo/docs/asset-manifest.json --naylib-dir /Users/punk1290/.nimble/pkgs2/naylib-26.08.0-19dd4e7e34c705c677e89b3a6516846c9f2e0125 --output-dir build/private-evidence/clean-checkout",
+      "exitCode": 0
+    },
+    {
+      "name": "core-package",
+      "command": "nimble --offline check && nimble --offline dump --json && nimble --offline test -y",
+      "exitCode": 0
+    },
+    {
+      "name": "gate-0",
+      "command": "nim c --hints:off --mm:orc --noNimblePath --path:<clean-checkout>/src tools/verify_goblin_gate0.nim && verify_goblin_gate0 --wire:<wire-audit> --oracle:<oracle> --baseline:<sibling-baseline>",
+      "exitCode": 0
+    },
+    {
+      "name": "private-headless",
+      "command": "tools/run_exact_headless_gate.sh --asset <asset> --oracle <oracle>",
+      "exitCode": 0
+    },
+    {
+      "name": "macos-capture",
+      "command": "tools/run_exact_raylib_capture.sh --asset <asset> --oracle <oracle> --reference-dir <references> --naylib-dir <copied-naylib> --output-dir <capture-output>",
+      "exitCode": 0
+    },
+    {
+      "name": "lifecycle-leaks",
+      "command": "tools/run_exact_lifecycle.sh --asset <asset> --naylib-dir <copied-naylib> --output-dir <lifecycle-output>",
+      "exitCode": 0
+    },
+    {
+      "name": "independent-consumer",
+      "command": "nim c --hints:off -d:release --mm:orc --noNimblePath -d:useNaylib --path:<clean-checkout>/src --path:<copied-naylib> --out:<outside-repository-binary> src/goblin_demo.nim && caffeinate -u <outside-repository-binary> <asset>",
+      "exitCode": 0
+    }
+  ],
+  "tests": {
+    "ordinaryCoreSuite": {
+      "passed": 63,
+      "skipped": 1,
+      "skipNames": [
+        "exact goblin private fixture unavailable"
+      ],
+      "skipPolicy": "permitted only in the ordinary redistributable suite"
+    },
+    "privateReadiness": {
+      "skipped": 0,
+      "allGatesPassed": true
+    },
+    "generatedRegistry": {
+      "officialDefinitionFiles": 353,
+      "types": 353,
+      "runtimeProperties": 586,
+      "regenerationDeterministic": true
+    }
+  },
+  "importerInventory": {
+    "objectCount": 525,
+    "propertyCount": 1531,
+    "tocPropertyCount": 35,
+    "encounteredPropertyKeyCount": 81,
+    "unknownTypeCount": 0,
+    "unknownPropertyCount": 0,
+    "typeCounts": {
+      "1": 1,
+      "2": 4,
+      "18": 1,
+      "20": 1,
+      "23": 1,
+      "25": 20,
+      "26": 51,
+      "30": 173,
+      "31": 3,
+      "40": 4,
+      "41": 2,
+      "43": 2,
+      "44": 6,
+      "45": 81,
+      "53": 1,
+      "57": 1,
+      "61": 5,
+      "62": 1,
+      "63": 1,
+      "64": 1,
+      "65": 3,
+      "81": 2,
+      "83": 1,
+      "100": 13,
+      "105": 13,
+      "106": 13,
+      "109": 3,
+      "111": 107,
+      "169": 1,
+      "420": 1,
+      "431": 1,
+      "435": 2,
+      "437": 2,
+      "442": 1,
+      "447": 1,
+      "515": 1
+    },
+    "outputAffectingUnsupportedDiagnostics": [],
+    "reportedInertDiagnostics": [],
+    "nonBlockingOutOfScopeMetadata": [
+      "state-machine records are retained metadata and are not used by linear playback",
+      "LayoutComponentStyle type 420 is inert for the default artboard and fixed oracle states"
+    ]
+  },
+  "publicInventory": {
+    "defaultArtboard": "Artboard",
+    "bounds": [0, 0, 500, 500],
+    "animations": [
+      {"name": "Timeline 1", "fps": 24, "durationFrames": 192, "speed": 2.0, "targetSeconds": 2.0},
+      {"name": "Timeline 2", "fps": 60, "durationFrames": 32, "speed": 1.0, "targetSeconds": 0.266666681},
+      {"name": "Timeline 3", "fps": 60, "durationFrames": 32, "speed": 1.0, "targetSeconds": 0.266666681}
+    ],
+    "embeddedPngs": 13,
+    "solidFillsPerState": 1,
+    "texturedMeshesPerState": 3,
+    "ikConstraints": 2,
+    "transformConstraints": 1
+  },
+  "officialOracleComparison": {
+    "statesPerAnimation": ["authored-start", "bounded-positive-target"],
+    "keyedObjects": 20,
+    "keyedProperties": 51,
+    "keyFrames": 173,
+    "solverObjects": 199,
+    "boneAndRootWorldMatricesPerState": 6,
+    "constraintsPerState": 3,
+    "deformedVerticesPerState": 107,
+    "meshIndicesPerState": 300,
+    "completeDrawListCompared": true,
+    "absoluteTolerance": 0.0001,
+    "relativeTolerance": 0.00001,
+    "moduloThreePoisonedReplacementCycles": 30,
+    "allComparisonsPassed": true
+  },
+  "macosCapture": {
+    "backend": "Naylib/Raylib direct rlgl textured triangles",
+    "canvas": [960, 540],
+    "backgroundRgba": [245, 247, 250, 255],
+    "roiHalfOpen": [210, 0, 750, 540],
+    "foregroundPixelsPerFrame": 291600,
+    "alpha": "straight-alpha texture input with separate source-over blending",
+    "maximumAdvanceSeconds": 0.1,
+    "repeatRunsByteIdentical": true,
+    "thresholdException": null,
+    "animations": [
+      {
+        "name": "Timeline 1",
+        "startCaptureSha256": "2e5dcbdb02157a488d2c3bd71fc7e324007e84a5344e4b8cd652867b92c0aba6",
+        "targetCaptureSha256": "a719d56f77fa7af5c032ec47baf0f18f2cc82ae7e309dd1632e015d61a574431",
+        "startReferenceSha256": "ac3e882aee9eb8a9ec1f8786a6084160fe1002ee935a9289211130048d6d8cef",
+        "targetReferenceSha256": "f617ff1b0a89c16b09f3afb8c0e001d5158da7775b82c27d8faf66bc88e7f126",
+        "startMeanAbsoluteRgba": 0.30667609739369,
+        "targetMeanAbsoluteRgba": 0.3145636145404664,
+        "startPixelsOver16": 1814,
+        "targetPixelsOver16": 1841,
+        "actualChangedPixels": 22478,
+        "referenceChangedPixels": 22558,
+        "outsideRoiErrors": 0,
+        "result": "pass"
+      },
+      {
+        "name": "Timeline 2",
+        "startCaptureSha256": "ed082864e5b5da26b2bc6e384543d884e829845a0e10f4e0a719f085ce027d8f",
+        "targetCaptureSha256": "6b98e95b573d935b96b35aa9802a9531f9d01f0ae4860b7a0c5041b43dff16bf",
+        "startReferenceSha256": "2a93230b50b4e3d5d8e9dcba95b6a175a9b080f0f59968eba4f93344c0936754",
+        "targetReferenceSha256": "03cfb658346e730e86fe882879bea68fdb2d567b2dd8ca630a112ce7e4e91140",
+        "startMeanAbsoluteRgba": 0.2813485939643347,
+        "targetMeanAbsoluteRgba": 0.2821407750342936,
+        "startPixelsOver16": 1450,
+        "targetPixelsOver16": 1458,
+        "actualChangedPixels": 3325,
+        "referenceChangedPixels": 3303,
+        "outsideRoiErrors": 0,
+        "result": "pass"
+      },
+      {
+        "name": "Timeline 3",
+        "startCaptureSha256": "bc1f4f3f602c909692d24744c6447345d8e0891c65923978cc529b91d0002b8b",
+        "targetCaptureSha256": "9714da0e0174a59a48311fbe491da72d4530b0ab52a284d9ff070afbfebc4fab",
+        "startReferenceSha256": "0c1f6c2d7dea8662738d2061074a043b70d08f84f88b6d292fa4391054b4026e",
+        "targetReferenceSha256": "fc3736cc59558a893ffcf1d79f99b29e009d839aeef484aa4220759e7e1af907",
+        "startMeanAbsoluteRgba": 0.29734567901234565,
+        "targetMeanAbsoluteRgba": 0.29813786008230453,
+        "startPixelsOver16": 1713,
+        "targetPixelsOver16": 1721,
+        "actualChangedPixels": 3327,
+        "referenceChangedPixels": 3306,
+        "outsideRoiErrors": 0,
+        "result": "pass"
+      }
+    ],
+    "translation": {
+      "paddedCanvas": [1160, 540],
+      "delta": [100, 0],
+      "baseSha256": "6847e5f1a01c1982dfb26c9742c98c0ff152949026ddb35224c3e2ca67b810cb",
+      "shiftedSha256": "34b5db0c04484075db8f37c20de7bcb79577764097595b623cffed5404958b04",
+      "allProjectedVerticesExact": true,
+      "foregroundMaskExact": true,
+      "vacatedAndOutsidePixelsBackground": true
+    }
+  },
+  "lifecycle": {
+    "failureRepetitionsPerPoint": 50,
+    "malformedInputs": 50,
+    "versionMismatches": 50,
+    "decodeFailurePoints": 13,
+    "totalDecodeFailures": 650,
+    "uploadFailurePoints": 13,
+    "totalUploadFailures": 650,
+    "sceneConstructionFailurePoints": ["clone", "startApply", "settle"],
+    "totalSceneConstructionFailures": 150,
+    "contextInitializationFailures": 50,
+    "drawSubmissionFailures": 50,
+    "captureReadbackFailures": 50,
+    "captureWriteFailures": 50,
+    "selectionCycles": 300,
+    "headlessAdvances": 10000,
+    "realRaylibFrames": 600,
+    "resourceCounts": {
+      "headlessAcquire": 13,
+      "headlessRelease": 13,
+      "gpuDecode": 13,
+      "gpuUpload": 13,
+      "gpuRelease": 13
+    },
+    "allCountersReturnedExactlyToBaseline": true,
+    "upwardTrendAfterWarmup": false,
+    "shutdownOrder": "render target, prepared image resources, window, imported file",
+    "postWindowExitWithinFiveSeconds": true,
+    "watchdogSecondsPerRun": 120,
+    "nativeLeaks": {
+      "tool": "/usr/bin/leaks --atExit",
+      "rawDetectedNodes": 287,
+      "rawDetectedBytes": 18720,
+      "excludedOsRootSymbol": "-[LNProcessInstanceRegistryClient makeXPCConnection]",
+      "excludedReason": "macOS AppIntents NSXPCConnection root cycle",
+      "remainingPrintedLeakStacks": 0,
+      "splineyAttributableDefinitelyLostAllocations": 0
+    }
+  },
+  "independentConsumer": {
+    "packageCopiedOutsideSplineyCheckout": true,
+    "binaryWrittenOutsideSplineyCheckout": true,
+    "publicImports": [
+      "raylib",
+      "spliney",
+      "spliney/backends/raylib/renderer"
+    ],
+    "animationSelections": 3,
+    "framesPerAnimation": 10,
+    "realWindowAndGpuLifecycle": true,
+    "result": "pass"
+  },
+  "sourceEvidenceSha256": {
+    "tools/rive_wire_audit.nim": "5bfb5a6d87684190c476be95b8e4cc9f940cee8103bf315adca32df49feac7d6",
+    "tools/run_rive_wire_audit.sh": "3f2d374a95918ac04ad58c1b6dff2a4c16f667f7383eea77f278448b9189f5d3",
+    "tools/rive_oracle_probe/main.cpp": "2b2179bfa14b8c02a4dcdc10e0bbf704b8f3b77e629f8d15408a438618172e9f",
+    "tools/rive_oracle_probe/premake5.lua": "8c0e9f4e871b7c396904281e229a92a02b1a92b829c895bd71a6bce05a25389d",
+    "tools/run_rive_oracle_probe.sh": "94ab4e0e0ff02d758d5624feb790921b60653e62ce43bf59c8e948bdbf3908fb",
+    "tools/verify_goblin_gate0.nim": "d3916b10fda9d8b4a1fd71aa516a59a7fa219d9c129763ed25fd6643d69add19",
+    "tools/generate_rive_registry.nim": "4d6080f91bb1a57790ffc694f0f9256fb508584f448f09c0e3fabc1f240d5790",
+    "tools/run_generate_rive_registry.sh": "2836b5b1644cab72a5fc905c660f27938f64c89679ad5a4b391641888db9d4d5",
+    "src/spliney/generated/wire_registry.nim": "2b465417a8c25761e8f684eeab67307733bcc6e584d5c5daafffa9c0afbf8257",
+    "tools/run_exact_headless_gate.sh": "fabe4464a930ed15fecfb2dd5bf9cec95bf2a1cda2c7f6ba02af868fc48a3fc6",
+    "tools/verify_exact_public_playback.nim": "bc384544e1376c1089332d12c2a35eaf94be0314bcb9a57760a77b3f5cb92934",
+    "tools/run_exact_raylib_capture.sh": "72fba33ee904162a20e8cdac5173066a2918bcb0a21d923fd9c9ae8882776f82",
+    "tools/verify_exact_raylib_capture.nim": "8f5310e64e7966e32ea090e1533daadf03ce8fc2a09f798bf6855ae6244f20c4",
+    "tools/run_exact_lifecycle.sh": "4d73434f57dcb0e22090de28d46559b38f1231977605d845e38a6e6e60090402",
+    "tools/verify_exact_lifecycle.nim": "b86167ae78227ed27ac9a3a1823d8041ebbcf5e6f97f04364804d3957438ece2",
+    "tools/verify_clean_checkout.sh": "72bae12b21434e71ab6960ee6f7ac6a09ecdf33936a44366c7b0f447124401a9",
+    "tests/consumer/goblin_demo/goblin_demo.nimble": "6b2b37d2e94e78200358a6bd12989d5c2505f1be718ba3f4a66540f03e9a9026",
+    "tests/consumer/goblin_demo/src/goblin_demo.nim": "5f747accba4df235a7fd255b53a9908700e56c96e6840aa2e5554ba63f998a4f",
+    "spliney.nimble": "0bb104739f97ad7d86172a3edb71a3fb168ba9da100a7f8d578d85b481c951c5"
+  },
+  "generatedManifestSha256": {
+    "docs/evidence/goblin-gate0-manifest.json": "e18ed3a695f5acb9d6a567fd7ce301bf2fb78ae6a0eb1a3b61590722283f97fa",
+    "docs/evidence/goblin-gate2-playback.json": "ae55230a1a6addbfe329acd7584ae926df9bac52359f147ce91b7c569c43bdf3",
+    "docs/evidence/goblin-gate2-solver-resources.json": "4bd330596e322a7176ab9279781b485b57839cacc5de6430c304424c4727625c",
+    "docs/evidence/goblin-gate3-draw-commands.json": "c71f5d1f05abe576e7f879f43afc24f4be9536a405fbb5657a9093b7d7db88ee",
+    "docs/evidence/goblin-gate4-raylib-capture.json": "3ea981231c5014e4c1a87713c8284ffa1882ad48a3134bf6ef2ff37eef1239b6",
+    "docs/evidence/goblin-gate5-lifecycle.json": "f5d74377f8c4049003608706e8302b395fbd71644b6ba8ede0730427331454cd",
+    "docs/evidence/goblin-headless-readiness.json": "fc779dda62e15d748fe09a5858c251bdc84c92fb5812b1e50b1e65ad303cce4f"
+  },
+  "privateOutputSha256": {
+    "cleanCheckoutResults": "fe196c82b2a077f91c684c80244c6c3b31c53b5ffb09f299a5fe3a043761322e",
+    "nimblePackage": "d49a1730e4cb4c572609b1a0c6c785d1bf83dad9c351e5246efdf7fd5ced08cb",
+    "captureMetrics": "55be06f09fe52dccbf3851edfec07199b896974ba1e2f9669aa7d86aaa1451e2",
+    "lifecycleMetrics": "4710c81c186c555bec632d84227423dcf2c8c05031c10224b0c6a44dfdc557fa",
+    "leaksReport": "795f7b0b5c48c33e0b7fb0270c64f3e32c325c9dd82d5d33bdc31e05063f1c33",
+    "coreLog": "d80ae399dac61d905a7dcd3a1d528bee8ff41ea472d1c3e383b71ebc63165ca2",
+    "gate0BuildLog": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "gate0Log": "1e1d01086d24a7e290962f1f55ff63ece1e87e6c1e35636861a9c256a31467f0",
+    "headlessLog": "d275808b0b79480805312796b88f9d895a5e0d32eef4474f40cbc98d1c25cb39",
+    "captureLog": "84b5cc648845169f3212fa8a7c14cd196594c96ef3d3e7a70ed22246a330e1c5",
+    "lifecycleLog": "f3e39c0dbdb24fcb464b7908f99ccae8e5172c1fbebf0f7a4b345356c8781b13",
+    "consumerLog": "ee25bcb864a76750bcfa2002e519ef251d5fe0de7880fb0b4b2ce71f3cdd57f1",
+    "nimbleDumpLog": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

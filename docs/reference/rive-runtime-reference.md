@@ -660,6 +660,27 @@ heavy native deps in the core. This argues strongly for the headless-core + thin
 
 ## 9. Sources
 
+### Pinned implementation spellings and enum values
+
+At official runtime commit
+`372b8092e940f32cf84499ae23a4899ec66a9ab1`, dependency sorting is implemented
+by `DependencySorter::sort/visit`; `Component::dependents()` exposes
+`m_DependencyHelper.dependents()`, and `Artboard::sortDependencies()` writes
+`m_DependencyOrder` then assigns `m_GraphOrder`. The older planned spelling
+`onDependencySolve` is absent at this pin and must not be copied into Spliney.
+The update hook is `virtual void update(ComponentDirt value)`. The generated
+property accessor is exactly `CoreRegistry::getBool(Core*, int)`, while scene
+input lookup is `Scene::getBool(const std::string&) const`.
+
+`rive::Loop` is `oneShot = 0`, `loop = 1`, and `pingPong = 2` in
+`include/rive/animation/loop.hpp`. Keyed interpolation is not a three-value
+enum at this pin: `InterpolatingKeyFrame.interpolationType` key 68 uses
+`0 = hold` and nonzero (authored value 1) = interpolate. A missing
+`interpolatorId` means linear interpolation; a resolved
+`KeyFrameInterpolator` supplies cubic/custom interpolation. All 173 exact
+goblin keyframes serialize interpolation type 1 and omit interpolator id, so
+the asset uses linear interpolation only.
+
 **Format & core:**
 - https://help.rive.app/runtimes/advanced_topics/format · https://rive.app/docs/runtimes/advanced-topic/format
 - https://github.com/rive-app/help-center/blob/master/runtimes/advanced_topics/format.md

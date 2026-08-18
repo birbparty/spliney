@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-08-15",
+  "baseCommit": "2768f2ac8c2ed2d4182524d9220283d02daad1cd",
+  "officialRuntimeSha": "372b8092e940f32cf84499ae23a4899ec66a9ab1",
+  "assetSha256": "7a2f1d58da22e12932e73e76366b48651e66d9980153ece5433188c8fd08bc35",
+  "privateOracleSha256": {
+    "first": "778a46c266d66dcc16c484cd6931505059d86ba7ed9f9e43f540c869a8a7406c",
+    "second": "778a46c266d66dcc16c484cd6931505059d86ba7ed9f9e43f540c869a8a7406c"
+  },
+  "solverInventoryPerState": {
+    "boneAndRootTransforms": 6,
+    "constraints": 3,
+    "meshes": 3,
+    "skins": 2,
+    "tendons": 6,
+    "weights": 81,
+    "contourMeshVertices": 107,
+    "solverObjects": 199
+  },
+  "fixedStates": {
+    "animations": 3,
+    "statesPerAnimation": ["authored-start", "bounded-positive-target"],
+    "absoluteTolerance": 0.0001,
+    "relativeTolerance": 0.00001,
+    "firstOracleResult": "pass",
+    "secondOracleResult": "pass"
+  },
+  "embeddedImages": {
+    "count": 13,
+    "sourceOrderStable": true,
+    "compressedPayloadsSharedAcrossSceneClones": true,
+    "prepareCalls": 13,
+    "prepareCallsAfterSuccessfulAndFailedReplacement": 13,
+    "releaseCalls": 13,
+    "actualRaylibDecodeEvidence": "docs/evidence/goblin-gate0-manifest.json"
+  },
+  "implementation": {
+    "rendererNeutral": true,
+    "generalPathScopeRequired": false,
+    "broadConstraintScopeRequired": false,
+    "componentIdMapping": "Component descendants only; non-component flat records excluded"
+  },
+  "commands": [
+    "nimble test -y",
+    "nim c -r --hints:off --mm:orc --outdir:build tools/verify_exact_keyed_runtime.nim <exact.riv> <official-oracle-first.json>",
+    "build/verify_exact_keyed_runtime <exact.riv> <official-oracle-second.json>",
+    "nim c -r --hints:off --mm:orc --outdir:build tools/verify_exact_public_playback.nim <exact.riv>",
+    "nim check --hints:off --mm:orc --noNimblePath tests/contracts/public_consumer.nim"
+  ],
+  "sourceSha256": {
+    "exactRuntime": "6aae4d93b05845f4e320e074c26b0fb933f92cf26aebc393f2db85bc2d84157c",
+    "artboardRuntime": "6dc07c929171c7e69a4e6ceed36f0f3d4d2b38621fed29d8f43b8648a6cbcecb",
+    "geometry": "b721b9170744f4e1e2b1cef6e25c59b0dc066d0c6d4819352ad7348d4662738b",
+    "publicContract": "16e91f71daf2af6462484240de263944bb5ee8622c21734cd1240a836e45685a",
+    "unitTests": "4dcddfcadeee2b31b201b8a4c12afd94ce3b61e7ec702c8b93b6a4429b630d35",
+    "oracleVerifier": "a063713d64c43e3e344d9234ba3d562b4ec631141388ce2b227e0dbc0ae4eeab",
+    "publicVerifier": "fb1a96e1e31cba4da21cee176c1260dea6986ec316fafec541429c30c8eb2611"
+  }
+}
